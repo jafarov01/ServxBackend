@@ -54,12 +54,10 @@ public class AuthServiceImpl implements IAuthService {
 
         userRepository.save(user);
 
-        request.getLanguagesSpoken().forEach(language -> {
-            languageRepository.save(Language.builder()
-                    .user(user)
-                    .language(language)
-                    .build());
-        });
+        request.getLanguagesSpoken().forEach(language -> languageRepository.save(Language.builder()
+                .user(user)
+                .language(language)
+                .build()));
 
         return mapToUserResponseDTO(user);
     }
@@ -92,12 +90,10 @@ public class AuthServiceImpl implements IAuthService {
         userRepository.save(user);
 
         // Save languages spoken
-        request.getLanguagesSpoken().forEach(language -> {
-            languageRepository.save(Language.builder()
-                    .user(user)
-                    .language(language)
-                    .build());
-        });
+        request.getLanguagesSpoken().forEach(language -> languageRepository.save(Language.builder()
+                .user(user)
+                .language(language)
+                .build()));
 
         // Save profiles and service areas
         request.getProfiles().forEach(profileDTO -> {
@@ -110,14 +106,12 @@ public class AuthServiceImpl implements IAuthService {
                     .build();
             profileRepository.save(profile);
 
-            profileDTO.getServiceAreaIds().forEach(serviceAreaId -> {
-                profileServiceAreaRepository.save(ProfileServiceArea.builder()
-                        .profile(profile)
-                        .serviceArea(ServiceArea.builder()
-                                .id(serviceAreaId)
-                                .build())
-                        .build());
-            });
+            profileDTO.getServiceAreaIds().forEach(serviceAreaId -> profileServiceAreaRepository.save(ProfileServiceArea.builder()
+                    .profile(profile)
+                    .serviceArea(ServiceArea.builder()
+                            .id(serviceAreaId)
+                            .build())
+                    .build()));
         });
 
         return mapToUserResponseDTO(user);
@@ -152,6 +146,7 @@ public class AuthServiceImpl implements IAuthService {
                         .zipCode(user.getAddress().getZipCode())
                         .addressLine(user.getAddress().getAddressLine())
                         .build())
+                .role(user.getRole() != null ? user.getRole().name() : null)
                 .build();
     }
 

@@ -15,7 +15,7 @@ CREATE TABLE users (
        email VARCHAR(100) UNIQUE NOT NULL,
        password VARCHAR(255) NOT NULL,
        phone_number VARCHAR(20) UNIQUE NOT NULL,
-       role VARCHAR(20) NOT NULL CHECK (role IN ('ServiceSeeker', 'ServiceProvider')),
+       role VARCHAR(20) NOT NULL CHECK (role IN ('SERVICE_SEEKER', 'SERVICE_PROVIDER')),
        education VARCHAR(100), -- Nullable for ServiceSeeker
        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
        address_id INT UNIQUE NOT NULL, -- One-to-One constraint
@@ -64,3 +64,74 @@ CREATE TABLE languages (
        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
        UNIQUE (user_id, language)
 );
+
+-- Insert Service Categories
+INSERT INTO service_categories (id, name) VALUES
+      (1, 'Cleaning'),
+      (2, 'Repairing'),
+      (3, 'Laundry'),
+      (4, 'Painting'),
+      (5, 'Appliance'),
+      (6, 'Plumbing'),
+      (7, 'Shifting');
+
+-- Insert Service Areas (Subcategories)
+INSERT INTO service_areas (id, category_id, name) VALUES
+      -- Cleaning
+      (1, 1, 'Deep Cleaning'),
+      (2, 1, 'Carpet Cleaning'),
+      (3, 1, 'Window Cleaning'),
+      (4, 1, 'Office Cleaning'),
+      (5, 1, 'Industrial Cleaning'),
+      (6, 1, 'Upholstery Cleaning'),
+      (7, 1, 'Floor Cleaning'),
+
+      -- Repairing
+      (8, 2, 'Electronics Repair'),
+      (9, 2, 'Appliance Repair'),
+      (10, 2, 'Plumbing Repair'),
+      (11, 2, 'HVAC Repair'),
+      (12, 2, 'Car Repair'),
+      (13, 2, 'Computer Repair'),
+      (14, 2, 'Furniture Repair'),
+
+      -- Laundry
+      (15, 3, 'Dry Cleaning'),
+      (16, 3, 'Wash and Fold'),
+      (17, 3, 'Ironing Service'),
+      (18, 3, 'Clothing Alterations'),
+      (19, 3, 'Shoe Repair'),
+
+      -- Painting
+      (20, 4, 'Interior Painting'),
+      (21, 4, 'Exterior Painting'),
+      (22, 4, 'Wall Murals'),
+      (23, 4, 'Furniture Painting'),
+      (24, 4, 'Fence Painting'),
+
+      -- Appliance
+      (25, 5, 'Air Conditioner Repair'),
+      (26, 5, 'Refrigerator Repair'),
+      (27, 5, 'Washing Machine Repair'),
+      (28, 5, 'Water Heater Repair'),
+      (29, 5, 'TV Repair'),
+      (30, 5, 'Microwave Repair'),
+      (31, 5, 'Chimney Repair'),
+      (32, 5, 'Dishwasher Repair'),
+      (33, 5, 'Others'),
+
+      -- Plumbing
+      (34, 6, 'Leak Repair'),
+      (35, 6, 'Pipe Installation'),
+      (36, 6, 'Drain Cleaning'),
+      (37, 6, 'Toilet Repair'),
+      (38, 6, 'Water Heater Installation'),
+      (39, 6, 'Faucet Repair'),
+
+      -- Shifting
+      (40, 7, 'Local Moving'),
+      (41, 7, 'Long-Distance Moving'),
+      (42, 7, 'Office Moving'),
+      (43, 7, 'Furniture Moving'),
+      (44, 7, 'Packing Services'),
+      (45, 7, 'Storage Services');

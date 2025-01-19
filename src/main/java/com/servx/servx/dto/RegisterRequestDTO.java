@@ -1,6 +1,5 @@
 package com.servx.servx.dto;
 
-import com.servx.servx.entity.Language;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -34,7 +33,7 @@ public class RegisterRequestDTO {
     private AddressDTO address;
 
     @NotBlank(message = "Role is mandatory")
-    @Pattern(regexp = "ServiceSeeker|ServiceProvider", message = "Role must be either 'ServiceSeeker' or 'ServiceProvider'")
+    @Pattern(regexp = "SERVICE_SEEKER|SERVICE_PROVIDER", message = "Role must be either 'ServiceSeeker' or 'ServiceProvider'")
     private String role;
 
     @Getter
