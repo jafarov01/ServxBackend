@@ -1,9 +1,6 @@
 package com.servx.servx.controller;
 
-import com.servx.servx.dto.LoginRequestDTO;
-import com.servx.servx.dto.RegisterRequestDTO;
-import com.servx.servx.dto.ServiceProviderRegisterRequestDTO;
-import com.servx.servx.dto.UserResponseDTO;
+import com.servx.servx.dto.*;
 import com.servx.servx.service.interfaces.IAuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,10 +37,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@Valid @RequestBody LoginRequestDTO request) {
-        String token = authService.login(request);
-
-        return ResponseEntity.ok(token);
+    public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
+        AuthResponseDTO response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
 
 }

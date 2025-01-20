@@ -1,9 +1,6 @@
 package com.servx.servx.service.impl;
 
-import com.servx.servx.dto.LoginRequestDTO;
-import com.servx.servx.dto.RegisterRequestDTO;
-import com.servx.servx.dto.ServiceProviderRegisterRequestDTO;
-import com.servx.servx.dto.UserResponseDTO;
+import com.servx.servx.dto.*;
 import com.servx.servx.entity.*;
 import com.servx.servx.enums.Role;
 import com.servx.servx.exception.EmailAlreadyExistsException;
@@ -118,7 +115,7 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public String login(LoginRequestDTO request){
+    public AuthResponseDTO login(LoginRequestDTO request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("Email not found"));
 
@@ -126,7 +123,12 @@ public class AuthServiceImpl implements IAuthService {
             throw new InvalidCredentialsException("Wrong password");
         }
 
-        return JwtUtils.generateToken(user.getEmail(), user.getRole().toString());
+        String token = JwtUtils.generateToken(user.getEmail(), user.getRole().toString());
+
+        return AuthResponseDTO.builder()
+                .token(token)
+                .role(user.getRole().name())
+                .build();
     }
 
     private UserResponseDTO mapToUserResponseDTO(User user) {
