@@ -5,13 +5,18 @@ import com.servx.servx.entity.*;
 import com.servx.servx.enums.Role;
 import com.servx.servx.exception.EmailAlreadyExistsException;
 import com.servx.servx.exception.InvalidCredentialsException;
+import com.servx.servx.exception.InvalidTokenException;
 import com.servx.servx.repository.*;
+import com.servx.servx.service.EmailService;
+import com.servx.servx.service.VerificationTokenService;
 import com.servx.servx.service.interfaces.IAuthService;
 import com.servx.servx.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +30,9 @@ public class AuthServiceImpl implements IAuthService {
     private final ServiceAreaRepository serviceAreaRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
+    private final VerificationTokenService verificationTokenService;
+    private final VerificationTokenRepository verificationTokenRepository;
 
     @Override
     public UserResponseDTO registerServiceSeeker(RegisterRequestDTO request) {
@@ -40,6 +48,7 @@ public class AuthServiceImpl implements IAuthService {
                 .email(request.getEmail())
                 .password(encodedPassword)
                 .phoneNumber(request.getPhoneNumber())
+                .isVerified(false)
                 .role(Role.SERVICE_SEEKER)
                 .address(Address.builder()
                         .city(request.getAddress().getCity())
@@ -55,6 +64,9 @@ public class AuthServiceImpl implements IAuthService {
                 .user(user)
                 .language(language)
                 .build()));
+
+        String verificationToken = verificationTokenService.createVerificationToken(user.getId()).getToken();
+        emailService.sendVerificationEmail(user, verificationToken);
 
         return mapToUserResponseDTO(user);
     }
@@ -75,6 +87,7 @@ public class AuthServiceImpl implements IAuthService {
                 .email(request.getEmail())
                 .password(encodedPassword)
                 .phoneNumber(request.getPhoneNumber())
+                .isVerified(false)
                 .role(Role.SERVICE_PROVIDER)
                 .education(request.getEducation())
                 .address(Address.builder()
@@ -111,12 +124,16 @@ public class AuthServiceImpl implements IAuthService {
                     .build()));
         });
 
+        // Generate and send email verification token
+        String verificationToken = verificationTokenService.createVerificationToken(user.getId()).getToken();
+        emailService.sendVerificationEmail(user, verificationToken);
+
         return mapToUserResponseDTO(user);
     }
 
     @Override
     public AuthResponseDTO login(LoginRequestDTO request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("Email not found"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -129,6 +146,40 @@ public class AuthServiceImpl implements IAuthService {
                 .token(token)
                 .role(user.getRole().name())
                 .build();
+    }
+
+    public ResponseEntity<String> verifyEmail(String token) {
+        // Find the token in the database
+        VerificationToken verificationToken = verificationTokenRepository.findByToken(token);
+
+        // Validate token existence
+        if (verificationToken == null) {
+            throw new InvalidTokenException("Invalid or expired verification token.");
+        }
+
+        // Check if the token is expired
+        if (verificationTokenService.isExpired(verificationToken)) {
+            throw new InvalidTokenException("Verification token has expired. Please request a new one.");
+        }
+
+        // Retrieve the associated user by userId
+        Long userId = verificationToken.getUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new InvalidTokenException("User associated with this token does not exist."));
+
+        // Check if the user is already verified
+        if (user.isVerified()) {
+            return ResponseEntity.badRequest().body("User email is already verified.");
+        }
+
+        // Mark the user as verified
+        user.setVerified(true);
+        userRepository.save(user);
+
+        // Delete the used token to prevent reuse
+        verificationTokenRepository.deleteById(verificationToken.getId());
+
+        return ResponseEntity.ok("Email verified successfully. You can now log in.");
     }
 
     private UserResponseDTO mapToUserResponseDTO(User user) {

@@ -1,3 +1,12 @@
+-- Create the 'verification_tokens' table
+CREATE TABLE verification_tokens (
+     id SERIAL PRIMARY KEY,
+     token VARCHAR(255) UNIQUE NOT NULL,
+     user_id INT NOT NULL,
+     expiry_date TIMESTAMP NOT NULL,
+     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Create Addresses Table (required for the Users table's foreign key)
 CREATE TABLE addresses (
        id SERIAL PRIMARY KEY,
@@ -15,6 +24,7 @@ CREATE TABLE users (
        email VARCHAR(100) UNIQUE NOT NULL,
        password VARCHAR(255) NOT NULL,
        phone_number VARCHAR(20) UNIQUE NOT NULL,
+       is_verified BOOLEAN DEFAULT FALSE NOT NULL,
        role VARCHAR(20) NOT NULL CHECK (role IN ('SERVICE_SEEKER', 'SERVICE_PROVIDER')),
        education VARCHAR(100), -- Nullable for ServiceSeeker
        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

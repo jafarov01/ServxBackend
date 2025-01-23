@@ -22,7 +22,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("api/auth/register/seeker", "api/auth/register/provider", "api/auth/login").permitAll() // Public endpoints
+                        .requestMatchers("api/auth/verify-email","api/auth/register/seeker", "api/auth/register/provider", "api/auth/login").permitAll() // Public endpoints
                         .anyRequest().authenticated() // All other endpoints require authentication
                 )
                 .httpBasic(Customizer.withDefaults()) // Use HTTP Basic authentication (optional, can be replaced with JWT later)
