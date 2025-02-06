@@ -1,4 +1,4 @@
-package com.servx.servx.service.interfaces;
+package com.servx.servx.service.Auth.interfaces;
 
 import com.servx.servx.dto.*;
 import org.springframework.http.ResponseEntity;

@@ -1,4 +1,4 @@
-package com.servx.servx.service;
+package com.servx.servx.service.Auth;
 
 import com.servx.servx.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;

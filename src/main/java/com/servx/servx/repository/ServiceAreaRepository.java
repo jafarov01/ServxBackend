@@ -9,5 +9,4 @@ import java.util.List;
 @Repository
 public interface ServiceAreaRepository extends JpaRepository<ServiceArea, Long> {
     List<ServiceArea> findByCategoryId(Long categoryId);
-    boolean existsByCategoryIdAndName(Long categoryId, String name);
 }

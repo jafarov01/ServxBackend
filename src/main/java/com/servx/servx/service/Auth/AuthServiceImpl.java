@@ -1,4 +1,4 @@
-package com.servx.servx.service.impl;
+package com.servx.servx.service.Auth;
 
 import com.servx.servx.dto.*;
 import com.servx.servx.entity.*;
@@ -7,16 +7,13 @@ import com.servx.servx.exception.EmailAlreadyExistsException;
 import com.servx.servx.exception.InvalidCredentialsException;
 import com.servx.servx.exception.InvalidTokenException;
 import com.servx.servx.repository.*;
-import com.servx.servx.service.EmailService;
-import com.servx.servx.service.VerificationTokenService;
-import com.servx.servx.service.interfaces.IAuthService;
+import com.servx.servx.service.Auth.interfaces.IAuthService;
 import com.servx.servx.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service

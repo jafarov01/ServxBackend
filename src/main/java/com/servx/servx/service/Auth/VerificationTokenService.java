@@ -1,6 +1,5 @@
-package com.servx.servx.service;
+package com.servx.servx.service.Auth;
 
-import com.servx.servx.entity.User;
 import com.servx.servx.entity.VerificationToken;
 import com.servx.servx.repository.VerificationTokenRepository;
 import org.springframework.beans.factory.annotation.Autowired;
