@@ -70,7 +70,7 @@ CREATE TABLE profile_service_areas (
 CREATE TABLE languages (
        id SERIAL PRIMARY KEY,
        user_id INT NOT NULL,
-       language VARCHAR(10) NOT NULL,
+       language VARCHAR(50) NOT NULL,
        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
        UNIQUE (user_id, language)
 );
