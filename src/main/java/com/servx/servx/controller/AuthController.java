@@ -16,16 +16,9 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/register/seeker")
-    public ResponseEntity<UserResponseDTO> registerServiceSeeker(@Valid @RequestBody RegisterRequestDTO request) {
-        UserResponseDTO response = authService.registerServiceSeeker(request);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @PostMapping("/register/provider")
-    public ResponseEntity<UserResponseDTO> registerServiceProvider(@Valid @RequestBody ServiceProviderRegisterRequestDTO request) {
-        UserResponseDTO response = authService.registerServiceProvider(request);
+    @PostMapping("/register")
+    public ResponseEntity<UserResponseDTO> register(@Valid @RequestBody RegisterRequestDTO request) {
+        UserResponseDTO response = authService.register(request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

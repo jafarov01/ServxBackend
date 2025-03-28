@@ -2,12 +2,10 @@ package com.servx.servx.entity;
 
 import com.servx.servx.enums.Role;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
-import javax.security.auth.callback.LanguageCallback;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
@@ -16,6 +14,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,18 +41,26 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role;
+    @Builder.Default
+    private Role role = Role.SERVICE_SEEKER;  // Default value added
 
-    @Column(nullable = true, length = 100) // Nullable only for ServiceSeeker
+    @Column(nullable = true, length = 100)
     private String education;
+
+    @CreationTimestamp  // Auto-populates on creation
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;  // Added missing field
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, optional = false)
     @JoinColumn(name = "address_id", referencedColumnName = "id", unique = true, nullable = false)
+    @ToString.Exclude  // Optional: Avoid recursion in toString()
     private Address address;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude  // Optional: Avoid recursion in toString()
     private Set<Language> languagesSpoken;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Profile> profiles;
+    @ToString.Exclude  // Optional: Avoid recursion in toString()
+    private Set<Service> services;
 }

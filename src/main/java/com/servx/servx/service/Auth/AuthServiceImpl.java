@@ -3,9 +3,7 @@ package com.servx.servx.service.Auth;
 import com.servx.servx.dto.*;
 import com.servx.servx.entity.*;
 import com.servx.servx.enums.Role;
-import com.servx.servx.exception.EmailAlreadyExistsException;
-import com.servx.servx.exception.InvalidCredentialsException;
-import com.servx.servx.exception.InvalidTokenException;
+import com.servx.servx.exception.*;
 import com.servx.servx.repository.*;
 import com.servx.servx.service.Auth.interfaces.IAuthService;
 import com.servx.servx.util.JwtUtils;
@@ -21,32 +19,31 @@ import java.util.stream.Collectors;
 public class AuthServiceImpl implements IAuthService {
     private final UserRepository userRepository;
     private final LanguageRepository languageRepository;
-    private final ProfileRepository profileRepository;
-    private final ProfileServiceAreaRepository profileServiceAreaRepository;
     private final AddressRepository addressRepository;
-    private final ServiceAreaRepository serviceAreaRepository;
-    private final ServiceCategoryRepository serviceCategoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final VerificationTokenService verificationTokenService;
     private final VerificationTokenRepository verificationTokenRepository;
 
     @Override
-    public UserResponseDTO registerServiceSeeker(RegisterRequestDTO request) {
+    public UserResponseDTO register(RegisterRequestDTO request) {
+        // Check for existing email/phone
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException("Email is already in use");
         }
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new PhoneNumberExistsException("Phone number already in use");
+        }
 
-        String encodedPassword = passwordEncoder.encode(request.getPassword());
-
+        // Build User with Address
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
-                .password(encodedPassword)
+                .password(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getPhoneNumber())
                 .isVerified(false)
-                .role(Role.SERVICE_SEEKER)
+                .role(validateAndGetRole(request.getRole())) // Handle role conversion
                 .address(Address.builder()
                         .city(request.getAddress().getCity())
                         .country(request.getAddress().getCountry())
@@ -55,73 +52,16 @@ public class AuthServiceImpl implements IAuthService {
                         .build())
                 .build();
 
-        userRepository.save(user);
+        // Add languages via cascade
+        user.setLanguagesSpoken(
+                request.getLanguagesSpoken().stream()
+                        .map(lang -> Language.builder().user(user).language(lang).build())
+                        .collect(Collectors.toSet())
+        );
 
-        request.getLanguagesSpoken().forEach(language -> languageRepository.save(Language.builder()
-                .user(user)
-                .language(language)
-                .build()));
+        userRepository.save(user); // Cascades to address and languages
 
-        String verificationToken = verificationTokenService.createVerificationToken(user.getId()).getToken();
-        emailService.sendVerificationEmail(user, verificationToken);
-
-        return mapToUserResponseDTO(user);
-    }
-
-    @Override
-    public UserResponseDTO registerServiceProvider(ServiceProviderRegisterRequestDTO request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException("Email is already in use");
-        }
-
-        // Encode the password
-        String encodedPassword = passwordEncoder.encode(request.getPassword());
-
-        // Build and save the user
-        User user = User.builder()
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .email(request.getEmail())
-                .password(encodedPassword)
-                .phoneNumber(request.getPhoneNumber())
-                .isVerified(false)
-                .role(Role.SERVICE_PROVIDER)
-                .education(request.getEducation())
-                .address(Address.builder()
-                        .city(request.getAddress().getCity())
-                        .country(request.getAddress().getCountry())
-                        .zipCode(request.getAddress().getZipCode())
-                        .addressLine(request.getAddress().getAddressLine())
-                        .build())
-                .build();
-        userRepository.save(user);
-
-        // Save languages spoken
-        request.getLanguagesSpoken().forEach(language -> languageRepository.save(Language.builder()
-                .user(user)
-                .language(language)
-                .build()));
-
-        // Save profiles and service areas
-        request.getProfiles().forEach(profileDTO -> {
-            Profile profile = Profile.builder()
-                    .user(user)
-                    .serviceCategory(ServiceCategory.builder()
-                            .id(profileDTO.getServiceCategoryId())
-                            .build())
-                    .workExperience(profileDTO.getWorkExperience())
-                    .build();
-            profileRepository.save(profile);
-
-            profileDTO.getServiceAreaIds().forEach(serviceAreaId -> profileServiceAreaRepository.save(ProfileServiceArea.builder()
-                    .profile(profile)
-                    .serviceArea(ServiceArea.builder()
-                            .id(serviceAreaId)
-                            .build())
-                    .build()));
-        });
-
-        // Generate and send email verification token
+        // Send verification email
         String verificationToken = verificationTokenService.createVerificationToken(user.getId()).getToken();
         emailService.sendVerificationEmail(user, verificationToken);
 
@@ -137,46 +77,46 @@ public class AuthServiceImpl implements IAuthService {
             throw new InvalidCredentialsException("Wrong password");
         }
 
-        String token = JwtUtils.generateToken(user.getEmail(), user.getRole().toString());
-
         return AuthResponseDTO.builder()
-                .token(token)
+                .token(JwtUtils.generateToken(user.getEmail(), user.getRole().toString()))
                 .role(user.getRole().name())
                 .build();
     }
 
+    @Override
     public ResponseEntity<String> verifyEmail(String token) {
-        // Find the token in the database
         VerificationToken verificationToken = verificationTokenRepository.findByToken(token);
-
-        // Validate token existence
         if (verificationToken == null) {
             throw new InvalidTokenException("Invalid or expired verification token.");
         }
 
-        // Check if the token is expired
         if (verificationTokenService.isExpired(verificationToken)) {
-            throw new InvalidTokenException("Verification token has expired. Please request a new one.");
+            throw new InvalidTokenException("Token expired. Request a new one.");
         }
 
-        // Retrieve the associated user by userId
-        Long userId = verificationToken.getUserId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new InvalidTokenException("User associated with this token does not exist."));
+        User user = userRepository.findById(verificationToken.getUserId())
+                .orElseThrow(() -> new InvalidTokenException("User not found."));
 
-        // Check if the user is already verified
         if (user.isVerified()) {
-            return ResponseEntity.badRequest().body("User email is already verified.");
+            return ResponseEntity.badRequest().body("Email already verified.");
         }
 
-        // Mark the user as verified
         user.setVerified(true);
         userRepository.save(user);
+        verificationTokenRepository.delete(verificationToken); // Invalidate token
 
-        // Delete the used token to prevent reuse
-        verificationTokenRepository.deleteById(verificationToken.getId());
+        return ResponseEntity.ok("Email verified successfully.");
+    }
 
-        return ResponseEntity.ok("Email verified successfully. You can now log in.");
+    private Role validateAndGetRole(String roleStr) {
+        if (roleStr == null || roleStr.isEmpty()) {
+            return Role.SERVICE_SEEKER; // Schema default
+        }
+        try {
+            return Role.valueOf(roleStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new InvalidRoleException("Invalid role: " + roleStr);
+        }
     }
 
     private UserResponseDTO mapToUserResponseDTO(User user) {
@@ -186,8 +126,7 @@ public class AuthServiceImpl implements IAuthService {
                 .lastName(user.getLastName())
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
-                .languagesSpoken(languageRepository.findByUserId(user.getId())
-                        .stream()
+                .languagesSpoken(user.getLanguagesSpoken().stream() // Use cascaded collection
                         .map(Language::getLanguage)
                         .collect(Collectors.toList()))
                 .address(UserResponseDTO.AddressDTO.builder()
@@ -196,8 +135,7 @@ public class AuthServiceImpl implements IAuthService {
                         .zipCode(user.getAddress().getZipCode())
                         .addressLine(user.getAddress().getAddressLine())
                         .build())
-                .role(user.getRole() != null ? user.getRole().name() : null)
+                .role(user.getRole().name())
                 .build();
     }
-
 }
