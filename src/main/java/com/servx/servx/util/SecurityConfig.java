@@ -1,41 +1,44 @@
 package com.servx.servx.util;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.LogoutConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    private final JwtAuthFilter jwtAuthFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/register", // Add this line
+                                "/api/auth/register",
                                 "/api/auth/login",
-                                "/api/services/categories",
-                                "/api/services/areas/{categoryId}",
                                 "/api/auth/verify-email"
                         ).permitAll()
-                        .anyRequest().authenticated() // All other endpoints require authentication
+                        .anyRequest().authenticated()
                 )
-                .httpBasic(Customizer.withDefaults()) // Use HTTP Basic authentication (optional, can be replaced with JWT later)
-                .formLogin(form -> form.defaultSuccessUrl("/").permitAll()) // Enable form-based login
-                .logout(LogoutConfigurer::permitAll) // Enable logout
-                .csrf(AbstractHttpConfigurer::disable); // Disable CSRF for testing (enable in production with proper tokens)
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }

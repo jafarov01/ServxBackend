@@ -39,6 +39,10 @@ public class User {
     @Column(nullable = false, length = 255)
     private String password;
 
+    @Column(name = "profile_photo_url", nullable = false, length = 255)
+    @Builder.Default
+    private String profilePhotoUrl = "/images/default-profile.jpg";
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -61,6 +65,6 @@ public class User {
     private Set<Language> languagesSpoken;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude  // Optional: Avoid recursion in toString()
-    private Set<Service> services;
+    @ToString.Exclude
+    private Set<ServiceProfile> services;
 }

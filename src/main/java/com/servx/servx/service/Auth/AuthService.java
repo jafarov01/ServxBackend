@@ -1,11 +1,19 @@
 package com.servx.servx.service.Auth;
 
-import com.servx.servx.dto.*;
-import com.servx.servx.entity.*;
+import com.servx.servx.dto.AuthResponseDTO;
+import com.servx.servx.dto.LoginRequestDTO;
+import com.servx.servx.dto.RegisterRequestDTO;
+import com.servx.servx.dto.UserResponseDTO;
+import com.servx.servx.entity.Address;
+import com.servx.servx.entity.Language;
+import com.servx.servx.entity.User;
+import com.servx.servx.entity.VerificationToken;
 import com.servx.servx.enums.Role;
 import com.servx.servx.exception.*;
-import com.servx.servx.repository.*;
-import com.servx.servx.service.Auth.interfaces.IAuthService;
+import com.servx.servx.repository.AddressRepository;
+import com.servx.servx.repository.LanguageRepository;
+import com.servx.servx.repository.UserRepository;
+import com.servx.servx.repository.VerificationTokenRepository;
 import com.servx.servx.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +24,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class AuthServiceImpl implements IAuthService {
+public class AuthService {
     private final UserRepository userRepository;
     private final LanguageRepository languageRepository;
     private final AddressRepository addressRepository;
@@ -24,8 +32,8 @@ public class AuthServiceImpl implements IAuthService {
     private final EmailService emailService;
     private final VerificationTokenService verificationTokenService;
     private final VerificationTokenRepository verificationTokenRepository;
+    private final JwtUtils jwtUtils;
 
-    @Override
     public UserResponseDTO register(RegisterRequestDTO request) {
         // Check for existing email/phone
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -68,22 +76,24 @@ public class AuthServiceImpl implements IAuthService {
         return mapToUserResponseDTO(user);
     }
 
-    @Override
     public AuthResponseDTO login(LoginRequestDTO request) {
         User user = userRepository.findByEmailIgnoreCase(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("Email not found"));
+
+        if (!user.isVerified()) {
+            throw new UnverifiedUserException("Email not verified. Please check your inbox.");
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidCredentialsException("Wrong password");
         }
 
         return AuthResponseDTO.builder()
-                .token(JwtUtils.generateToken(user.getEmail(), user.getRole().toString()))
+                .token(jwtUtils.generateToken(user.getEmail(), user.getRole().toString()))
                 .role(user.getRole().name())
                 .build();
     }
 
-    @Override
     public ResponseEntity<String> verifyEmail(String token) {
         VerificationToken verificationToken = verificationTokenRepository.findByToken(token);
         if (verificationToken == null) {
@@ -126,6 +136,7 @@ public class AuthServiceImpl implements IAuthService {
                 .lastName(user.getLastName())
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
+                .profilePhotoUrl(user.getProfilePhotoUrl())
                 .languagesSpoken(user.getLanguagesSpoken().stream() // Use cascaded collection
                         .map(Language::getLanguage)
                         .collect(Collectors.toList()))

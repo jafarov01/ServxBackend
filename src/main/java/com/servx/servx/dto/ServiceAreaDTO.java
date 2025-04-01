@@ -1,15 +1,17 @@
 package com.servx.servx.dto;
 
-import lombok.Builder;
+import com.servx.servx.entity.ServiceArea;
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
-@Setter
-@Builder
 public class ServiceAreaDTO {
     private Long id;
     private String name;
     private Long categoryId;
-    private String categoryName;
+
+    public ServiceAreaDTO(ServiceArea area) {
+        this.id = area.getId();
+        this.name = area.getName();
+        this.categoryId = area.getCategory().getId();
+    }
 }

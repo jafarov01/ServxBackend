@@ -1,27 +1,24 @@
 package com.servx.servx.dto;
 
 import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.util.List;
 
-@Getter
-@Setter
+@Data
 @Builder
-public class UserResponseDTO {
+public class UserDetailsResponseDTO {
     private Long id;
     private String firstName;
     private String lastName;
     private String email;
     private String phoneNumber;
-    private List<String> languagesSpoken;
-    private AddressDTO address;
-    private String role;
     private String profilePhotoUrl;
+    private String role;
+    private AddressDTO address;
+    private List<String> languagesSpoken;
 
-    @Getter
-    @Setter
+    @Data
     @Builder
     public static class AddressDTO {
         private String city;

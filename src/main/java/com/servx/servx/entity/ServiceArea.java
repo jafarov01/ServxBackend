@@ -2,16 +2,14 @@ package com.servx.servx.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "service_areas", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"category_id", "name"})
+        @UniqueConstraint(columnNames = {"category_id", "name"}, name = "uk_service_area_category_name")
 })
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -22,10 +20,10 @@ public class ServiceArea {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100) // ISO-compliant length for codes or descriptive names
+    @Column(nullable = false, length = 50)
     private String name;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY) // Service area must belong to a category
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private ServiceCategory category;
 }

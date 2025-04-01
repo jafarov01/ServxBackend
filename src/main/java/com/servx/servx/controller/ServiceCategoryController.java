@@ -1,38 +1,23 @@
 package com.servx.servx.controller;
 
-import com.servx.servx.dto.ServiceAreaDTO;
-import com.servx.servx.entity.ServiceArea;
-import com.servx.servx.entity.ServiceCategory;
+import com.servx.servx.dto.ServiceCategoryDTO;
 import com.servx.servx.service.ServiceData.ServiceCategoryService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/services")
+@RequestMapping("/api/categories")
+@RequiredArgsConstructor
 public class ServiceCategoryController {
-    private final ServiceCategoryService serviceCategoryService;
+    private final ServiceCategoryService categoryService;
 
-    @Autowired
-    public ServiceCategoryController(ServiceCategoryService serviceCategoryService) {
-        this.serviceCategoryService = serviceCategoryService;
+    @GetMapping
+    public ResponseEntity<List<ServiceCategoryDTO>> getAllServiceCategories() {
+        return ResponseEntity.ok(categoryService.getAllCategories());
     }
-
-    @GetMapping("/categories")
-    public ResponseEntity<List<ServiceCategory>> getServiceCategories() {
-        List<ServiceCategory> categories = serviceCategoryService.getAllServiceCategories();
-        return ResponseEntity.ok(categories);
-    }
-
-    @GetMapping("/areas/{categoryId}")
-    public ResponseEntity<List<ServiceAreaDTO>> getServiceAreas(@PathVariable Long categoryId) {
-        List<ServiceAreaDTO> areas = serviceCategoryService.getServiceAreasByCategoryId(categoryId);
-        return ResponseEntity.ok(areas);
-    }
-
 }

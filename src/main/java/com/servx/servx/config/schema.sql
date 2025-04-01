@@ -1,13 +1,3 @@
--- Create the 'verification_tokens' table
-CREATE TABLE verification_tokens
-(
-    id          SERIAL PRIMARY KEY,
-    token       VARCHAR(255) UNIQUE NOT NULL,
-    user_id     INT                 NOT NULL,
-    expiry_date TIMESTAMP           NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
-
 -- Create Addresses Table (required for the Users table's foreign key)
 CREATE TABLE addresses
 (
@@ -21,17 +11,18 @@ CREATE TABLE addresses
 -- Create Users Table
 CREATE TABLE users
 (
-    id           SERIAL PRIMARY KEY,
-    first_name   VARCHAR(50)                          NOT NULL,
-    last_name    VARCHAR(50)                          NOT NULL,
-    email        VARCHAR(100) UNIQUE                  NOT NULL,
-    password     VARCHAR(255)                         NOT NULL,
-    phone_number VARCHAR(20) UNIQUE                   NOT NULL,
-    is_verified  BOOLEAN     DEFAULT FALSE            NOT NULL,
-    role         VARCHAR(20) DEFAULT 'SERVICE_SEEKER' NOT NULL CHECK (role IN ('SERVICE_SEEKER', 'SERVICE_PROVIDER')),
-    education    VARCHAR(100),                                  -- Nullable for ServiceSeeker
-    created_at   TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
-    address_id   INT UNIQUE                           NOT NULL, -- One-to-One constraint
+    id                SERIAL PRIMARY KEY,
+    first_name        VARCHAR(50)                                        NOT NULL,
+    last_name         VARCHAR(50)                                        NOT NULL,
+    email             VARCHAR(100) UNIQUE                                NOT NULL,
+    password          VARCHAR(255)                                       NOT NULL,
+    phone_number      VARCHAR(20) UNIQUE                                 NOT NULL,
+    profile_photo_url VARCHAR(255) DEFAULT '/images/default-profile.jpg' NOT NULL,
+    is_verified       BOOLEAN      DEFAULT FALSE                         NOT NULL,
+    role              VARCHAR(20)  DEFAULT 'SERVICE_SEEKER'              NOT NULL CHECK (role IN ('SERVICE_SEEKER', 'SERVICE_PROVIDER')),
+    education         VARCHAR(100),                                                -- Nullable for ServiceSeeker
+    created_at        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    address_id        INT UNIQUE                                         NOT NULL, -- One-to-One constraint
     FOREIGN KEY (address_id) REFERENCES addresses (id) ON DELETE CASCADE
 );
 
@@ -56,14 +47,29 @@ CREATE TABLE service_areas
 CREATE TABLE services
 (
     id                  SERIAL PRIMARY KEY,
-    user_id             INT         NOT NULL,
-    service_category_id INT         NOT NULL,
-    service_area_id     INT         NOT NULL,
-    work_experience     VARCHAR(50) NOT NULL,
+    user_id             INT              NOT NULL,
+    service_category_id INT              NOT NULL,
+    service_area_id     INT              NOT NULL,
+    work_experience     VARCHAR(50)      NOT NULL,
+    rating              DOUBLE PRECISION DEFAULT 0,
+    review_count        INT              DEFAULT 0,
+    price               DOUBLE PRECISION NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (service_category_id) REFERENCES service_categories (id) ON DELETE CASCADE,
-    FOREIGN KEY (service_area_id) REFERENCES service_areas (id) ON DELETE CASCADE,
-    FOREIGN KEY (service_category_id, service_area_id) REFERENCES service_areas (category_id, id)
+    FOREIGN KEY (service_area_id) REFERENCES service_areas (id) ON DELETE CASCADE
+);
+
+-- Create Reviews Table
+CREATE TABLE reviews
+(
+    id         SERIAL PRIMARY KEY,
+    service_id INT              NOT NULL,
+    user_id    INT              NOT NULL,
+    rating     DOUBLE PRECISION NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment    TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (service_id) REFERENCES services (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 -- Create Languages Table
@@ -74,6 +80,16 @@ CREATE TABLE languages
     language VARCHAR(50) NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     UNIQUE (user_id, language)
+);
+
+-- Create the 'verification_tokens' table
+CREATE TABLE verification_tokens
+(
+    id          SERIAL PRIMARY KEY,
+    token       VARCHAR(255) UNIQUE NOT NULL,
+    user_id     INT                 NOT NULL,
+    expiry_date TIMESTAMP           NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 -- Insert Service Categories

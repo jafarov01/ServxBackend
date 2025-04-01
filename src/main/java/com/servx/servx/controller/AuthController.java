@@ -1,20 +1,21 @@
 package com.servx.servx.controller;
 
-import com.servx.servx.dto.*;
-import com.servx.servx.service.Auth.interfaces.IAuthService;
+import com.servx.servx.dto.AuthResponseDTO;
+import com.servx.servx.dto.LoginRequestDTO;
+import com.servx.servx.dto.RegisterRequestDTO;
+import com.servx.servx.dto.UserResponseDTO;
+import com.servx.servx.service.Auth.AuthService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
-    private final IAuthService authService;
-
-    public AuthController(IAuthService authService) {
-        this.authService = authService;
-    }
+    private final AuthService authService;
 
     @PostMapping("/register")
     public ResponseEntity<UserResponseDTO> register(@Valid @RequestBody RegisterRequestDTO request) {
