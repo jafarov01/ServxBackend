@@ -15,12 +15,9 @@ public class JwtUtils {
     private final SecretKey secretKey;
     private final long expirationTime;
 
-    public JwtUtils(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration}") long expirationTime
-    ) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
-        this.expirationTime = expirationTime;
+    public JwtUtils(@Value("${jwt.secret}") String secret, @Value("${jwt.expiration}") long expiration) {
+        this.secretKey = Keys.hmacShaKeyFor(java.util.Base64.getDecoder().decode(secret));
+        this.expirationTime = expiration;
     }
 
     public String generateToken(String email, String role) {
