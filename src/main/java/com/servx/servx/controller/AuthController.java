@@ -5,6 +5,7 @@ import com.servx.servx.dto.LoginRequestDTO;
 import com.servx.servx.dto.RegisterRequestDTO;
 import com.servx.servx.dto.UserResponseDTO;
 import com.servx.servx.service.Auth.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,12 @@ public class AuthController {
     public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
         AuthResponseDTO response = authService.login(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+
+        return ResponseEntity.ok().build();  // A simple OK response to confirm logout
     }
 
 }
