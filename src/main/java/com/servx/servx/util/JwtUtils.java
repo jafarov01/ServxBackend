@@ -1,5 +1,6 @@
 package com.servx.servx.util;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -20,10 +21,11 @@ public class JwtUtils {
         this.expirationTime = expiration;
     }
 
-    public String generateToken(String email, String role) {
+    public String generateToken(String email, String role, Long userId) {
         return Jwts.builder()
                 .setSubject(email)
                 .claim("role", role)
+                .claim("userId", userId)  // Add userId as claim
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(secretKey)
@@ -46,5 +48,15 @@ public class JwtUtils {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+    // Extract userId from JWT token
+    public Long extractUserId(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.get("userId", Long.class);  // Assuming "userId" is part of the claims
     }
 }

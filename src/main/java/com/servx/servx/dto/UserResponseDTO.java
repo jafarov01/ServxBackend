@@ -1,5 +1,6 @@
 package com.servx.servx.dto;
 
+import com.servx.servx.entity.Language;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,7 +16,7 @@ public class UserResponseDTO {
     private String lastName;
     private String email;
     private String phoneNumber;
-    private List<String> languagesSpoken;
+    private List<String> languagesSpoken;  // Updated to List<String>
     private AddressDTO address;
     private String role;
     private String profilePhotoUrl;

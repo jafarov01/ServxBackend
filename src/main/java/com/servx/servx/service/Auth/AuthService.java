@@ -51,7 +51,7 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getPhoneNumber())
                 .isVerified(false)
-                .role(validateAndGetRole(request.getRole())) // Handle role conversion
+                .role(Role.valueOf(request.getRole()))  // Convert role from String to Enum
                 .address(Address.builder()
                         .city(request.getAddress().getCity())
                         .country(request.getAddress().getCountry())
@@ -60,14 +60,14 @@ public class AuthService {
                         .build())
                 .build();
 
-        // Add languages via cascade
+        // Set languages (List<String> to List<Language>)
         user.setLanguagesSpoken(
                 request.getLanguagesSpoken().stream()
-                        .map(lang -> Language.builder().user(user).language(lang).build())
-                        .collect(Collectors.toSet())
+                        .map(lang -> Language.builder().user(user).language(lang).build())  // Map strings to Language entities
+                        .collect(Collectors.toList())
         );
 
-        userRepository.save(user); // Cascades to address and languages
+        userRepository.save(user);  // Persist user with address and languages
 
         // Send verification email
         String verificationToken = verificationTokenService.createVerificationToken(user.getId()).getToken();
@@ -89,7 +89,7 @@ public class AuthService {
         }
 
         return AuthResponseDTO.builder()
-                .token(jwtUtils.generateToken(user.getEmail(), user.getRole().toString()))
+                .token(jwtUtils.generateToken(user.getEmail(), user.getRole().toString(), user.getId())) // Pass userId here
                 .role(user.getRole().name())
                 .build();
     }
@@ -137,16 +137,16 @@ public class AuthService {
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
                 .profilePhotoUrl(user.getProfilePhotoUrl())
-                .languagesSpoken(user.getLanguagesSpoken().stream() // Use cascaded collection
-                        .map(Language::getLanguage)
-                        .collect(Collectors.toList()))
+                .languagesSpoken(user.getLanguagesSpoken().stream()
+                        .map(Language::getLanguage)  // Explicitly map to String
+                        .collect(Collectors.toList()))  // Collect into List<String>
                 .address(UserResponseDTO.AddressDTO.builder()
                         .city(user.getAddress().getCity())
                         .country(user.getAddress().getCountry())
                         .zipCode(user.getAddress().getZipCode())
                         .addressLine(user.getAddress().getAddressLine())
                         .build())
-                .role(user.getRole().name())
+                .role(user.getRole().name())  // Convert role to string
                 .build();
     }
 }
