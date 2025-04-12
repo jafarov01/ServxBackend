@@ -6,6 +6,7 @@ import com.servx.servx.dto.UserResponseDTO;
 import com.servx.servx.entity.Address;
 import com.servx.servx.entity.Language;
 import com.servx.servx.entity.User;
+import com.servx.servx.enums.Role;
 import com.servx.servx.exception.UserNotFoundException;
 import com.servx.servx.repository.LanguageRepository;
 import com.servx.servx.repository.UserRepository;
@@ -70,6 +71,25 @@ public class UserService {
         }
     }
 
+    // upgrade to service provider
+    @Transactional
+    public void upgradeToProvider(Long userId, String education) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (user.getRole() == Role.SERVICE_PROVIDER) {
+            throw new IllegalStateException("User is already a Service Provider");
+        }
+
+        if (education == null || education.isBlank()) {
+            throw new IllegalArgumentException("Education cannot be empty");
+        }
+
+        user.setRole(Role.SERVICE_PROVIDER);
+        user.setEducation(education);
+        userRepository.save(user);
+    }
+
     // Delete profile photo
     @Transactional
     public DeletePhotoResponseDTO deleteProfilePhoto(Long userId) {
@@ -130,6 +150,7 @@ public class UserService {
                         .map(Language::getLanguage)  // Map each Language entity to its language code (String)
                         .collect(Collectors.toList()))  // Collect into List<String>
                 .address(mapToAddressDTO(user.getAddress()))  // Map address
+                .education(user.getEducation())
                 .role(user.getRole().name())  // Convert role to string
                 .build();
     }

@@ -1,11 +1,9 @@
 package com.servx.servx.controller;
 
-import com.servx.servx.dto.DeletePhotoResponseDTO;
-import com.servx.servx.dto.ProfilePhotoResponseDTO;
-import com.servx.servx.dto.UpdateUserRequestDTO;
-import com.servx.servx.dto.UserResponseDTO;
+import com.servx.servx.dto.*;
 import com.servx.servx.service.UserService;
 import com.servx.servx.util.JwtUtils;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +15,19 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserController {
     private final UserService userService;
     private final JwtUtils jwtUtils; // Inject the JwtUtils service
+
+    // upgrade to service provider endpoint
+    @PostMapping("/me/upgrade-to-provider")
+    public ResponseEntity<Void> upgradeToProvider(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @Valid @RequestBody UpgradeToProviderRequestDTO request) {
+
+        String token = authorizationHeader.replace("Bearer ", "");
+        Long userId = jwtUtils.extractUserId(token);
+
+        userService.upgradeToProvider(userId, request.getEducation());
+        return ResponseEntity.ok().build();
+    }
 
     // Get user details
     @GetMapping("/me")

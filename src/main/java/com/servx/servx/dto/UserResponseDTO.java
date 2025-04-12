@@ -1,6 +1,7 @@
 package com.servx.servx.dto;
 
 import com.servx.servx.entity.Language;
+import io.micrometer.common.lang.Nullable;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,6 +21,8 @@ public class UserResponseDTO {
     private AddressDTO address;
     private String role;
     private String profilePhotoUrl;
+    @Nullable
+    private String education;
 
     @Getter
     @Setter

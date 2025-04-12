@@ -51,7 +51,8 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getPhoneNumber())
                 .isVerified(false)
-                .role(Role.valueOf(request.getRole()))  // Convert role from String to Enum
+                .role(Role.valueOf(request.getRole()))
+                .education(null)
                 .address(Address.builder()
                         .city(request.getAddress().getCity())
                         .country(request.getAddress().getCountry())
@@ -138,15 +139,16 @@ public class AuthService {
                 .phoneNumber(user.getPhoneNumber())
                 .profilePhotoUrl(user.getProfilePhotoUrl())
                 .languagesSpoken(user.getLanguagesSpoken().stream()
-                        .map(Language::getLanguage)  // Explicitly map to String
-                        .collect(Collectors.toList()))  // Collect into List<String>
+                        .map(Language::getLanguage)
+                        .collect(Collectors.toList()))
                 .address(UserResponseDTO.AddressDTO.builder()
                         .city(user.getAddress().getCity())
                         .country(user.getAddress().getCountry())
                         .zipCode(user.getAddress().getZipCode())
                         .addressLine(user.getAddress().getAddressLine())
                         .build())
-                .role(user.getRole().name())  // Convert role to string
+                .role(user.getRole().name())
+                .education(user.getEducation())
                 .build();
     }
 }

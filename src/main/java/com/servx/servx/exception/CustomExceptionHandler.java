@@ -87,6 +87,34 @@ public class CustomExceptionHandler {
         return buildErrorResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED, request.getRequestURI());
     }
 
+    @ExceptionHandler(DuplicateEntryException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleDuplicateEntryException(DuplicateEntryException ex, HttpServletRequest request) {
+        logError(ex, request.getRequestURI(), HttpStatus.CONFLICT);
+        return buildErrorResponse(ex.getMessage(), HttpStatus.CONFLICT, request.getRequestURI());
+    }
+
+    @ExceptionHandler(InvalidServiceAreaException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidServiceAreaException(InvalidServiceAreaException ex, HttpServletRequest request) {
+        logError(ex, request.getRequestURI(), HttpStatus.BAD_REQUEST);
+        return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST, request.getRequestURI());
+    }
+
+    @ExceptionHandler(UnauthorizedRoleException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleUnauthorizedRoleException(UnauthorizedRoleException ex, HttpServletRequest request) {
+        logError(ex, request.getRequestURI(), HttpStatus.FORBIDDEN);
+        return buildErrorResponse(ex.getMessage(), HttpStatus.FORBIDDEN, request.getRequestURI());
+    }
+
+    @ExceptionHandler(MismatchedCategoryException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleMismatchedCategoryException(MismatchedCategoryException ex, HttpServletRequest request) {
+        logError(ex, request.getRequestURI(), HttpStatus.BAD_REQUEST);
+        return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST, request.getRequestURI());
+    }
+
     private void logError(Exception ex, String path, HttpStatus status) {
         logger.error("Error occurred at path: {}, Status: {}, Message: {}", path, status, ex.getMessage(), ex);
     }
