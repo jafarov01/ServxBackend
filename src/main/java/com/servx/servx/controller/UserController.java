@@ -5,6 +5,7 @@ import com.servx.servx.service.UserService;
 import com.servx.servx.util.JwtUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +27,7 @@ public class UserController {
         Long userId = jwtUtils.extractUserId(token);
 
         userService.upgradeToProvider(userId, request.getEducation());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 
     // Get user details
