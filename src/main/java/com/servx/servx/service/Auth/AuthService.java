@@ -1,9 +1,6 @@
 package com.servx.servx.service.Auth;
 
-import com.servx.servx.dto.AuthResponseDTO;
-import com.servx.servx.dto.LoginRequestDTO;
-import com.servx.servx.dto.RegisterRequestDTO;
-import com.servx.servx.dto.UserResponseDTO;
+import com.servx.servx.dto.*;
 import com.servx.servx.entity.Address;
 import com.servx.servx.entity.Language;
 import com.servx.servx.entity.User;
@@ -141,7 +138,7 @@ public class AuthService {
                 .languagesSpoken(user.getLanguagesSpoken().stream()
                         .map(Language::getLanguage)
                         .collect(Collectors.toList()))
-                .address(UserResponseDTO.AddressDTO.builder()
+                .address(AddressResponseDTO.builder()
                         .city(user.getAddress().getCity())
                         .country(user.getAddress().getCountry())
                         .zipCode(user.getAddress().getZipCode())

@@ -67,5 +67,5 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
-    private Set<ServiceProfile> services;
+    private List<ServiceProfile> services;
 }

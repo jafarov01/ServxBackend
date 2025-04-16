@@ -17,20 +17,11 @@ public class UserResponseDTO {
     private String lastName;
     private String email;
     private String phoneNumber;
-    private List<String> languagesSpoken;  // Updated to List<String>
-    private AddressDTO address;
+    private List<String> languagesSpoken;
+    private AddressResponseDTO address;
     private String role;
     private String profilePhotoUrl;
     @Nullable
     private String education;
 
-    @Getter
-    @Setter
-    @Builder
-    public static class AddressDTO {
-        private String city;
-        private String country;
-        private String zipCode;
-        private String addressLine;
-    }
 }

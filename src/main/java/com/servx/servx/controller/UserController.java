@@ -19,15 +19,15 @@ public class UserController {
 
     // upgrade to service provider endpoint
     @PostMapping("/me/upgrade-to-provider")
-    public ResponseEntity<Void> upgradeToProvider(
+    public ResponseEntity<UserResponseDTO> upgradeToProvider(
             @RequestHeader("Authorization") String authorizationHeader,
             @Valid @RequestBody UpgradeToProviderRequestDTO request) {
 
         String token = authorizationHeader.replace("Bearer ", "");
         Long userId = jwtUtils.extractUserId(token);
 
-        userService.upgradeToProvider(userId, request.getEducation());
-        return ResponseEntity.status(HttpStatus.OK).build();
+        UserResponseDTO updatedUser = userService.upgradeToProvider(userId, request.getEducation());
+        return ResponseEntity.ok(updatedUser);
     }
 
     // Get user details
@@ -37,7 +37,7 @@ public class UserController {
         String token = authorizationHeader.replace("Bearer ", "");
         Long userId = jwtUtils.extractUserId(token); // Extract userId from JWT token
 
-        UserResponseDTO userDetails = userService.getUserDetails(userId); // Pass userId to the service
+        UserResponseDTO userDetails = userService.getUserDetails(userId);
         return ResponseEntity.ok(userDetails);
     }
 
@@ -51,7 +51,7 @@ public class UserController {
         String token = authorizationHeader.replace("Bearer ", "");
         Long userId = jwtUtils.extractUserId(token);
 
-        String photoUrl = userService.updateProfilePhoto(userId, file);  // Pass userId to the service
+        String photoUrl = userService.updateProfilePhoto(userId, file);
         return ResponseEntity.ok(new ProfilePhotoResponseDTO(photoUrl));
     }
 

@@ -34,7 +34,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userEmail;
@@ -56,8 +55,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     throw new InsufficientAuthenticationException("User not verified");
                 }
 
+                // Create CustomUserDetails and set it as the principal
+                CustomUserDetails customUserDetails = new CustomUserDetails(user);
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userEmail,
+                        customUserDetails,  // Set CustomUserDetails as principal
                         null,
                         Collections.singleton(new SimpleGrantedAuthority(user.getRole().name()))
                 );

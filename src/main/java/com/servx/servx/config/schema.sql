@@ -163,3 +163,45 @@ VALUES
     (43, 7, 'Furniture Moving'),
     (44, 7, 'Packing Services'),
     (45, 7, 'Storage Services');
+
+CREATE TABLE service_requests
+(
+    id                   SERIAL PRIMARY KEY,
+    description          TEXT        NOT NULL,
+    severity             VARCHAR(20) NOT NULL,
+    status               VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    request_address_line TEXT        NOT NULL,
+    request_city         VARCHAR(50) NOT NULL,
+    request_zip_code     VARCHAR(10) NOT NULL,
+    request_country      VARCHAR(3)  NOT NULL,
+    service_id           INT         NOT NULL REFERENCES services (id),
+    seeker_id            INT         NOT NULL REFERENCES users (id),
+    provider_id          INT         NOT NULL REFERENCES users (id),
+    created_at           TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TYPE notification_type AS ENUM (
+    'NEW_REQUEST',
+    'REQUEST_ACCEPTED',
+    'REQUEST_DECLINED',
+    'BOOKING_CONFIRMED',
+    'SERVICE_COMPLETED',
+    'SYSTEM_ALERT'
+);
+
+-- Create Notifications Table
+CREATE TABLE notifications
+(
+    id           SERIAL PRIMARY KEY,
+    type         notification_type NOT NULL,
+    recipient_id INT               NOT NULL REFERENCES users (id),
+    payload      JSONB             NOT NULL,
+    is_read      BOOLEAN           NOT NULL DEFAULT false,
+    created_at   TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Indexes for Optimized Queries
+CREATE INDEX idx_notifications_recipient ON notifications (recipient_id);
+CREATE INDEX idx_notifications_type ON notifications (type);
+CREATE INDEX idx_notifications_created_at ON notifications (created_at);
+CREATE INDEX idx_notifications_is_read ON notifications (is_read);

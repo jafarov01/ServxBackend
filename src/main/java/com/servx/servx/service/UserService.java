@@ -1,5 +1,6 @@
 package com.servx.servx.service;
 
+import com.servx.servx.dto.AddressResponseDTO;
 import com.servx.servx.dto.DeletePhotoResponseDTO;
 import com.servx.servx.dto.UpdateUserRequestDTO;
 import com.servx.servx.dto.UserResponseDTO;
@@ -73,7 +74,7 @@ public class UserService {
 
     // upgrade to service provider
     @Transactional
-    public void upgradeToProvider(Long userId, String education) {
+    public UserResponseDTO upgradeToProvider(Long userId, String education) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
@@ -87,7 +88,9 @@ public class UserService {
 
         user.setRole(Role.SERVICE_PROVIDER);
         user.setEducation(education);
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        return mapToUserResponseDTO(savedUser);
     }
 
     // Delete profile photo
@@ -155,9 +158,8 @@ public class UserService {
                 .build();
     }
 
-    // Map Address to AddressDTO
-    private UserResponseDTO.AddressDTO mapToAddressDTO(Address address) {
-        return UserResponseDTO.AddressDTO.builder()
+    private AddressResponseDTO mapToAddressDTO(Address address) {
+        return AddressResponseDTO.builder()
                 .city(address.getCity())
                 .country(address.getCountry())
                 .zipCode(address.getZipCode())
