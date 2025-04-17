@@ -40,6 +40,17 @@ public class ServiceRequestController {
         return serviceRequestService.createServiceRequest(requestDTO, seeker);
     }
 
+    @PatchMapping("/{id}/accept")
+    public ServiceRequestResponseDTO acceptServiceRequest(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        User provider = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        return serviceRequestService.acceptRequest(id, provider);
+    }
+
     @GetMapping("/{id}")
     public ServiceRequestResponseDTO getServiceRequest(
             @PathVariable Long id,

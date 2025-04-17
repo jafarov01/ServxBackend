@@ -6,6 +6,8 @@ import com.servx.servx.repository.ServiceProfileRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Component;
 
+import java.util.stream.Collectors;
+
 @Component
 public class ServiceRequestMapper {
 
@@ -29,6 +31,7 @@ public class ServiceRequestMapper {
                 .createdAt(request.getCreatedAt())
                 .service(mapServiceProfileToDTO(service))
                 .provider(mapUserToDTO(request.getProvider()))
+                .seeker(mapUserToDTO(request.getSeeker()))
                 .build();
     }
 
@@ -66,8 +69,20 @@ public class ServiceRequestMapper {
                 .id(user.getId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
                 .profilePhotoUrl(user.getProfilePhotoUrl())
+                .languagesSpoken(user.getLanguagesSpoken().stream()
+                        .map(Language::getLanguage)
+                        .collect(Collectors.toList()))
+                .address(AddressResponseDTO.builder()
+                        .city(user.getAddress().getCity())
+                        .country(user.getAddress().getCountry())
+                        .zipCode(user.getAddress().getZipCode())
+                        .addressLine(user.getAddress().getAddressLine())
+                        .build())
+                .role(user.getRole().name())
+                .education(user.getEducation())
                 .build();
     }
 }

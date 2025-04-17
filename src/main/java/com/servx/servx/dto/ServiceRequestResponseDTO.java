@@ -19,4 +19,5 @@ public class ServiceRequestResponseDTO {
     private LocalDateTime createdAt;
     private ServiceProfileDTO service;
     private UserResponseDTO provider;
+    private UserResponseDTO seeker;
 }

@@ -55,6 +55,33 @@ public class ServiceRequestService {
         return serviceRequestMapper.toDto(savedRequest); // Using ServiceRequestMapper
     }
 
+    @Transactional
+    public ServiceRequestResponseDTO acceptRequest(Long requestId, User provider) {
+        ServiceRequest request = serviceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new EntityNotFoundException("Request not found"));
+
+        if (!request.getProvider().equals(provider)) {
+            throw new UnauthorizedAccessException("Only the provider can accept requests");
+        }
+
+        request.setStatus(ServiceRequest.RequestStatus.ACCEPTED);
+        ServiceRequest updated = serviceRequestRepository.save(request);
+
+        // Create notification for seeker
+        notificationService.createNotification(
+                request.getSeeker(),
+                Notification.NotificationType.REQUEST_ACCEPTED,
+                new NotificationPayload(
+                        request.getId(),
+                        null,
+                        "Your service request has been accepted",
+                        provider.getId()
+                )
+        );
+
+        return serviceRequestMapper.toDto(updated);
+    }
+
     public ServiceRequestResponseDTO getRequestDetails(Long requestId, User user) {
         ServiceRequest request = serviceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new EntityNotFoundException("Request not found"));
@@ -102,7 +129,8 @@ public class ServiceRequestService {
                 mapToAddressResponseDTO(request.getAddress()),
                 request.getCreatedAt(),
                 mapToServiceProfileDTO(request.getService()),
-                mapToUserResponseDTO(request.getProvider())
+                mapToUserResponseDTO(request.getProvider()),
+                mapToUserResponseDTO(request.getSeeker())
         );
     }
 
