@@ -62,6 +62,6 @@ public class ServiceRequest {
     }
 
     public enum RequestStatus {
-        PENDING, ACCEPTED, DECLINED, COMPLETED
+        PENDING, ACCEPTED, DECLINED, BOOKING_CONFIRMED, COMPLETED
     }
 }

@@ -7,14 +7,13 @@ import com.servx.servx.entity.ServiceArea;
 import com.servx.servx.entity.ServiceCategory;
 import com.servx.servx.entity.ServiceProfile;
 import com.servx.servx.entity.User;
-import com.servx.servx.enums.Role;
 import com.servx.servx.exception.*;
 import com.servx.servx.repository.ServiceAreaRepository;
 import com.servx.servx.repository.ServiceCategoryRepository;
 import com.servx.servx.repository.ServiceProfileRepository;
 import com.servx.servx.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

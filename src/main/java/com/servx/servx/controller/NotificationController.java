@@ -32,7 +32,6 @@ public class NotificationController {
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new UserNotFoundException("User ID could not be found"));
 
-        // Remove pagination parameters
         return notificationService.getUserNotifications(user, unreadOnly);
     }
 

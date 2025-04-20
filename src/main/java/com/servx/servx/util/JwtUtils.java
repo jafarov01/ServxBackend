@@ -4,12 +4,14 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
 
+@Slf4j
 @Component
 public class JwtUtils {
 
@@ -37,6 +39,7 @@ public class JwtUtils {
             Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
             return true;
         } catch (JwtException e) {
+            log.error("JWT validation failed: {}", e.getMessage()); // ← Add this line
             return false;
         }
     }

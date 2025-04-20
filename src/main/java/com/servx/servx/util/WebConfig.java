@@ -2,17 +2,21 @@ package com.servx.servx.util;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
+import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.beans.factory.annotation.Value;
+import static org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+
 @Configuration
+@EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO) // <<< ADD THIS LINE
 public class WebConfig implements WebMvcConfigurer {
     @Value("${app.upload-dir}")
     private String uploadDir;

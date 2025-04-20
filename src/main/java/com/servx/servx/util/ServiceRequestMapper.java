@@ -36,13 +36,23 @@ public class ServiceRequestMapper {
     }
 
     // Maps Address entity to AddressResponseDTO
-    private AddressResponseDTO mapAddressToDTO(RequestAddress address) {
+    public AddressResponseDTO mapAddressToDTO(RequestAddress address) {
         return new AddressResponseDTO(
                 address.getAddressLine(),
                 address.getCity(),
                 address.getZipCode(),
                 address.getCountry()
         );
+    }
+
+    // Maps AddressRequestDTO to RequestAddress
+    public RequestAddress mapAddress(AddressRequestDTO addressDTO) {
+        return RequestAddress.builder()
+                .addressLine(addressDTO.getAddressLine())
+                .city(addressDTO.getCity())
+                .zipCode(addressDTO.getZipCode())
+                .country(addressDTO.getCountry())
+                .build();
     }
 
     // Maps ServiceProfile entity to ServiceProfileDTO

@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -18,6 +20,18 @@ import java.time.format.DateTimeFormatter;
 public class CustomExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(CustomExceptionHandler.class);
+
+    //Authentication exception
+    @ExceptionHandler({
+            AuthenticationException.class,
+            BadCredentialsException.class,
+            AuthenticationCredentialsNotFoundException.class
+    })
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleAuthenticationException(AuthenticationException ex, HttpServletRequest request) {
+        logError(ex, request.getRequestURI(), HttpStatus.UNAUTHORIZED);
+        return buildErrorResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED, request.getRequestURI());
+    }
 
     // validation errors
     @ExceptionHandler({MethodArgumentNotValidException.class})

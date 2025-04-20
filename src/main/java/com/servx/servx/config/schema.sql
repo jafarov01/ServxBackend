@@ -205,3 +205,18 @@ CREATE INDEX idx_notifications_recipient ON notifications (recipient_id);
 CREATE INDEX idx_notifications_type ON notifications (type);
 CREATE INDEX idx_notifications_created_at ON notifications (created_at);
 CREATE INDEX idx_notifications_is_read ON notifications (is_read);
+
+CREATE TABLE chat_messages
+(
+    id                 SERIAL PRIMARY KEY,
+    service_request_id INT       NOT NULL REFERENCES service_requests (id) ON DELETE CASCADE,
+    sender_id          INT       NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    recipient_id       INT       NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    content            TEXT      NOT NULL,
+    timestamp          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_read            BOOLEAN   NOT NULL DEFAULT FALSE
+);
+
+-- Add indexes for efficient querying
+CREATE INDEX idx_chat_messages_service_request_id ON chat_messages (service_request_id);
+CREATE INDEX idx_chat_messages_timestamp ON chat_messages (timestamp);
