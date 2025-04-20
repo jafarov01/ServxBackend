@@ -15,9 +15,11 @@ public class ChatMessageDTO {
     private Long id;
     private Long serviceRequestId;
     private Long senderId;
-    private Long recipientId; // Client needs to know who receives it
-    private String senderName; // Helpful for UI display
+    private Long recipientId;
+    private String senderName;
     private String content;
     private Instant timestamp;
-    private boolean isRead; // Include read status
+    private boolean isRead;
+    private BookingRequestPayload bookingPayload;
+    private String recipientEmail;
 }

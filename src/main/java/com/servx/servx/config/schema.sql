@@ -208,13 +208,14 @@ CREATE INDEX idx_notifications_is_read ON notifications (is_read);
 
 CREATE TABLE chat_messages
 (
-    id                 SERIAL PRIMARY KEY,
-    service_request_id INT       NOT NULL REFERENCES service_requests (id) ON DELETE CASCADE,
-    sender_id          INT       NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    recipient_id       INT       NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    content            TEXT      NOT NULL,
-    timestamp          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    is_read            BOOLEAN   NOT NULL DEFAULT FALSE
+    id                   SERIAL PRIMARY KEY,
+    service_request_id   INT       NOT NULL REFERENCES service_requests (id) ON DELETE CASCADE,
+    sender_id            INT       NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    recipient_id         INT       NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    content              TEXT      NOT NULL,
+    timestamp            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_read              BOOLEAN   NOT NULL DEFAULT FALSE,
+    booking_payload_json TEXT NULL
 );
 
 -- Add indexes for efficient querying

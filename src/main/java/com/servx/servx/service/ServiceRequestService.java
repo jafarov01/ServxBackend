@@ -8,6 +8,7 @@ import com.servx.servx.repository.ServiceRequestRepository;
 import com.servx.servx.repository.UserRepository;
 import com.servx.servx.util.ServiceRequestMapper;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ServiceRequestService {
@@ -80,6 +82,95 @@ public class ServiceRequestService {
         );
 
         return serviceRequestMapper.toDto(updated);
+    }
+
+    // --- NEW METHOD: Confirm Booking ---
+    @Transactional
+    public ServiceRequestResponseDTO confirmBooking(Long requestId, User seeker) {
+        log.info("Attempting to confirm booking for request ID {} by seeker ID {}", requestId, seeker.getId());
+        ServiceRequest request = serviceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new EntityNotFoundException("Service Request not found with ID: " + requestId));
+
+        // Validation: Only the seeker for this request can confirm
+        if (!request.getSeeker().getId().equals(seeker.getId())) {
+            log.warn("Unauthorized attempt to confirm booking for request {}. User {} is not the seeker.", requestId, seeker.getId());
+            throw new UnauthorizedAccessException("Only the service seeker can confirm the booking.");
+        }
+
+        // Validation: Can only confirm if currently ACCEPTED (or potentially another state if needed)
+        if (request.getStatus() != ServiceRequest.RequestStatus.ACCEPTED) {
+            log.warn("Attempt to confirm booking for request {} failed. Status is not ACCEPTED, it is {}", requestId, request.getStatus());
+            throw new IllegalStateException("Booking can only be confirmed if the request is currently accepted.");
+        }
+
+        // --- Main Logic ---
+        // TODO: In the future, create a persistent Booking entity here if needed
+        // Booking booking = bookingRepository.save(new Booking(...));
+        // request.setBooking(booking); // Link request to booking
+
+        // Update request status
+        request.setStatus(ServiceRequest.RequestStatus.BOOKING_CONFIRMED);
+        ServiceRequest updatedRequest = serviceRequestRepository.save(request);
+        log.info("Booking confirmed for request ID {}. Status updated to BOOKING_CONFIRMED.", requestId);
+
+        // --- Send Notification to Provider ---
+        notificationService.createNotification(
+                request.getProvider(), // Notify the provider
+                Notification.NotificationType.BOOKING_CONFIRMED,
+                new NotificationPayload(
+                        request.getId(),
+                        null, // bookingId if you created a Booking entity
+                        "Your booking proposal for request #"+request.getId()+" was confirmed by the client.",
+                        seeker.getId() // ID of the user who performed the action
+                )
+        );
+
+        return serviceRequestMapper.toDto(updatedRequest);
+    }
+
+    // --- NEW METHOD: Reject Booking ---
+    @Transactional
+    public ServiceRequestResponseDTO rejectBooking(Long requestId, User seeker) {
+        log.info("Attempting to reject booking for request ID {} by seeker ID {}", requestId, seeker.getId());
+        ServiceRequest request = serviceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new EntityNotFoundException("Service Request not found with ID: " + requestId));
+
+        // Validation: Only the seeker for this request can reject
+        if (!request.getSeeker().getId().equals(seeker.getId())) {
+            log.warn("Unauthorized attempt to reject booking for request {}. User {} is not the seeker.", requestId, seeker.getId());
+            throw new UnauthorizedAccessException("Only the service seeker can reject the booking proposal.");
+        }
+
+        // Validation: Can only reject if currently ACCEPTED (or maybe if PROPOSED state existed)
+        if (request.getStatus() != ServiceRequest.RequestStatus.ACCEPTED) {
+            log.warn("Attempt to reject booking for request {} failed. Status is not ACCEPTED, it is {}", requestId, request.getStatus());
+            throw new IllegalStateException("Booking proposal can only be rejected if the request is currently accepted.");
+        }
+
+        // --- Main Logic ---
+        // Decide what status to revert to. Let's go back to ACCEPTED
+        // meaning the request is still active but needs a new proposal/discussion.
+        // OR introduce a BOOKING_REJECTED status if needed.
+        // For now, let's just log it and keep status ACCEPTED. If status should change, uncomment below.
+        // request.setStatus(RequestStatus.ACCEPTED); // Or potentially a specific REJECTED status
+        // ServiceRequest updatedRequest = serviceRequestRepository.save(request);
+        log.info("Booking proposal rejected for request ID {}. Status remains ACCEPTED (or implement specific rejected state).", requestId);
+
+        // --- Send Notification to Provider ---
+        // Use REQUEST_DECLINED type, or create a specific BOOKING_REJECTED type
+        notificationService.createNotification(
+                request.getProvider(), // Notify the provider
+                Notification.NotificationType.REQUEST_DECLINED, // Reusing this, or create BOOKING_REJECTED
+                new NotificationPayload(
+                        request.getId(),
+                        null,
+                        "Your booking proposal for request #"+request.getId()+" was declined by the client.",
+                        seeker.getId()
+                )
+        );
+
+        // Return current state (which might not have changed if keeping ACCEPTED)
+        return serviceRequestMapper.toDto(request); // Or updatedRequest if status changed
     }
 
     public ServiceRequestResponseDTO getRequestDetails(Long requestId, User user) {

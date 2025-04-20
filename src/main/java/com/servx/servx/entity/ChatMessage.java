@@ -10,7 +10,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "chat_messages")
-@Data // Lombok: Generates getters, setters, toString, etc.
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -36,10 +36,20 @@ public class ChatMessage {
     private String content;
 
     @Column(nullable = false)
-    @Builder.Default // Set default value via builder
-    private Instant timestamp = Instant.now(); // Use Instant for timezone handling
+    @Builder.Default
+    private Instant timestamp = Instant.now();
 
     @Column(name = "is_read", nullable = false)
     @Builder.Default
     private boolean isRead = false;
+
+    @Column(name = "booking_payload_json", columnDefinition = "TEXT", nullable = true)
+    private String bookingPayloadJson;
+
+    @PrePersist
+    protected void onCreate() {
+        if (timestamp == null) {
+            timestamp = Instant.now();
+        }
+    }
 }

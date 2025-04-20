@@ -10,7 +10,9 @@ import com.servx.servx.util.CustomUserDetails;
 import com.servx.servx.util.JwtUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
@@ -22,6 +24,7 @@ import java.util.List;
 @RequestMapping("/api/service-requests")
 @RequiredArgsConstructor
 @Validated
+@Slf4j
 public class ServiceRequestController {
 
     private final ServiceRequestService serviceRequestService;
@@ -73,5 +76,29 @@ public class ServiceRequestController {
         return type.equalsIgnoreCase("provider")
                 ? serviceRequestService.getProviderRequests(user.getId())
                 : serviceRequestService.getSeekerRequests(user.getId());
+    }
+
+    @PostMapping("/{id}/confirm-booking")
+    public ResponseEntity<ServiceRequestResponseDTO> confirmBooking(
+            @PathVariable("id") Long requestId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        log.info("Received request to confirm booking for request ID: {}", requestId);
+        User seeker = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        // Service method handles validation and status update
+        ServiceRequestResponseDTO updatedRequest = serviceRequestService.confirmBooking(requestId, seeker);
+        return ResponseEntity.ok(updatedRequest);
+    }
+
+    @PostMapping("/{id}/reject-booking")
+    public ResponseEntity<ServiceRequestResponseDTO> rejectBooking( // Consider returning NO_CONTENT if preferred
+                                                                    @PathVariable("id") Long requestId,
+                                                                    @AuthenticationPrincipal CustomUserDetails userDetails) {
+        log.info("Received request to reject booking for request ID: {}", requestId);
+        User seeker = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        // Service method handles validation and notification
+        ServiceRequestResponseDTO updatedRequest = serviceRequestService.rejectBooking(requestId, seeker);
+        return ResponseEntity.ok(updatedRequest); // Return updated (or current) state
     }
 }

@@ -30,12 +30,12 @@ public class ChatWsController {
         try {
             ChatMessageDTO savedMessageDto = chatService.saveMessage(chatMessageDto, principal.getName());
 
-            User recipient = userRepository.findById(savedMessageDto.getRecipientId())
-                    .orElseThrow(() -> new UserNotFoundException("Recipient not found during send"));
-            String recipientEmail = recipient.getEmail();
+            String recipientEmail = savedMessageDto.getRecipientEmail();
+            if (recipientEmail == null) {
+                log.error("Recipient email is null for message ID {}, cannot send to user queue.", savedMessageDto.getId());
+                return;
+            }
 
-
-            // Use the fetched/mapped email
             messagingTemplate.convertAndSendToUser(
                     recipientEmail,
                     "/queue/messages",
