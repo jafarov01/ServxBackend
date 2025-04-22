@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List; // Import List if needed for non-paged methods
 
 @Repository
@@ -19,10 +20,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     // Find bookings for a specific provider based on status, ordered by schedule time
     Page<Booking> findByProviderIdAndStatusOrderByScheduledStartTimeAsc(Long providerId, BookingStatus status, Pageable pageable);
 
-    // Optional: Add methods for different sorting or fetching without pagination if needed later
-    // List<Booking> findBySeekerIdAndStatusOrderByScheduledStartTimeDesc(Long seekerId, BookingStatus status);
-    // List<Booking> findByProviderIdAndStatusOrderByScheduledStartTimeDesc(Long providerId, BookingStatus status);
+    List<Booking> findByProviderIdAndScheduledStartTimeBetweenOrderByScheduledStartTimeAsc(
+            Long providerId, Instant startTime, Instant endTime);
 
-    // Optional: Find a booking by its unique booking number
-    // Optional<Booking> findByBookingNumber(String bookingNumber);
+    List<Booking> findBySeekerIdAndScheduledStartTimeBetweenOrderByScheduledStartTimeAsc(
+            Long seekerId, Instant startTime, Instant endTime);
 }

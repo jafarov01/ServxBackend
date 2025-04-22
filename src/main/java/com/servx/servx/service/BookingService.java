@@ -16,6 +16,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -129,5 +132,39 @@ public class BookingService {
                 )
         );
         log.info("Cancellation notification sent to user {}", otherParty.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingDTO> getProviderBookingsByDateRange(User provider, LocalDate startDate, LocalDate endDate) {
+        log.info("Fetching bookings for provider ID {} from {} to {}", provider.getId(), startDate, endDate);
+        // Calculate time range in UTC (start of startDate to start of day *after* endDate)
+        Instant startInstant = startDate.atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant endInstant = endDate.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC); // Exclusive end
+
+        List<Booking> bookings = bookingRepository.findByProviderIdAndScheduledStartTimeBetweenOrderByScheduledStartTimeAsc(
+                provider.getId(), startInstant, endInstant
+        );
+        log.info("Found {} bookings for provider ID {} in date range", bookings.size(), provider.getId());
+        return mapBookingListToDto(bookings);
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingDTO> getSeekerBookingsByDateRange(User seeker, LocalDate startDate, LocalDate endDate) {
+        log.info("Fetching bookings for seeker ID {} from {} to {}", seeker.getId(), startDate, endDate);
+        Instant startInstant = startDate.atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant endInstant = endDate.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC); // Exclusive end
+
+        List<Booking> bookings = bookingRepository.findBySeekerIdAndScheduledStartTimeBetweenOrderByScheduledStartTimeAsc(
+                seeker.getId(), startInstant, endInstant
+        );
+        log.info("Found {} bookings for seeker ID {} in date range", bookings.size(), seeker.getId());
+        return mapBookingListToDto(bookings);
+    }
+
+    // Helper method to map list (can reuse if needed)
+    private List<BookingDTO> mapBookingListToDto(List<Booking> bookings) {
+        return bookings.stream()
+                .map(bookingMapper::toDto) // Use your existing mapper
+                .collect(Collectors.toList());
     }
 }

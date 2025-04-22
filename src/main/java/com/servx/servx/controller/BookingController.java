@@ -15,9 +15,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -71,5 +75,34 @@ public class BookingController {
             log.error("Unexpected error cancelling booking {}", bookingId, e);
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    @GetMapping("/by-date") // Define a distinct path for this query
+    public ResponseEntity<List<BookingDTO>> getMyBookingsByDateRange(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate, // Expect YYYY-MM-DD
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {   // Expect YYYY-MM-DD
+
+        log.info("Fetching bookings for user {} from {} to {}", userDetails.getUsername(), startDate, endDate);
+        User user = findUser(userDetails); // Use helper method
+
+        List<BookingDTO> bookings;
+        if (user.getRole() == Role.SERVICE_PROVIDER) {
+            bookings = bookingService.getProviderBookingsByDateRange(user, startDate, endDate);
+        } else if (user.getRole() == Role.SERVICE_SEEKER) {
+            bookings = bookingService.getSeekerBookingsByDateRange(user, startDate, endDate);
+        } else {
+            log.warn("User {} has unexpected role {}", user.getEmail(), user.getRole());
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(bookings);
+    }
+
+    private User findUser(CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUsername() == null) {
+            throw new UnauthorizedAccessException("User details not found in security context.");
+        }
+        return userRepository.findByEmailIgnoreCase(userDetails.getUsername())
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + userDetails.getUsername()));
     }
 }

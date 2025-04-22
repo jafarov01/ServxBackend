@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,10 +32,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final LanguageRepository languageRepository;
 
+    @Value("${app.base-url}")
+    private String appBaseUrl;
+
     @Value("${app.upload-dir}")
     private String uploadDir;
 
     // Fetch user details without explicitly passing userId
+    @Transactional(readOnly = true)
     public UserResponseDTO getUserDetails(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
@@ -141,19 +147,27 @@ public class UserService {
 
     // Map User to UserResponseDTO
     private UserResponseDTO mapToUserResponseDTO(User user) {
+        if (user == null) return null;
+
+        String baseUrl = appBaseUrl;
+
+        List<String> languages = user.getLanguagesSpoken() != null ?
+                user.getLanguagesSpoken().stream()
+                        .map(Language::getLanguage)
+                        .collect(Collectors.toList()) :
+                Collections.emptyList();
+
         return UserResponseDTO.builder()
                 .id(user.getId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
-                .profilePhotoUrl(user.getProfilePhotoUrl())
-                .languagesSpoken(user.getLanguagesSpoken().stream()
-                        .map(Language::getLanguage)  // Map each Language entity to its language code (String)
-                        .collect(Collectors.toList()))  // Collect into List<String>
-                .address(mapToAddressDTO(user.getAddress()))  // Map address
+                .profilePhotoUrl(constructFullUrl(baseUrl, user.getProfilePhotoUrl()))
+                .languagesSpoken(languages)
+                .address(mapToAddressDTO(user.getAddress()))
                 .education(user.getEducation())
-                .role(user.getRole().name())  // Convert role to string
+                .role(user.getRole() != null ? user.getRole().name() : null)
                 .build();
     }
 
@@ -164,5 +178,17 @@ public class UserService {
                 .zipCode(address.getZipCode())
                 .addressLine(address.getAddressLine())
                 .build();
+    }
+
+    private String constructFullUrl(String baseUrl, String path) {
+        if (path == null || path.isBlank() || baseUrl == null || baseUrl.isBlank()) {
+            return null;
+        }
+        if (path.toLowerCase().startsWith("http://") || path.toLowerCase().startsWith("https://")) {
+            return path; // Already absolute
+        }
+        String cleanBaseUrl = baseUrl.replaceAll("/$", "");
+        String cleanPath = path.startsWith("/") ? path : "/" + path;
+        return cleanBaseUrl + cleanPath;
     }
 }
