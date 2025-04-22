@@ -1,0 +1,28 @@
+package com.servx.servx.repository;
+
+import com.servx.servx.entity.Booking;
+import com.servx.servx.enums.BookingStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List; // Import List if needed for non-paged methods
+
+@Repository
+public interface BookingRepository extends JpaRepository<Booking, Long> {
+
+    // Find bookings for a specific seeker based on status, ordered by schedule time
+    // Returns a Page for potential pagination in the "My Bookings" tab
+    Page<Booking> findBySeekerIdAndStatusOrderByScheduledStartTimeAsc(Long seekerId, BookingStatus status, Pageable pageable);
+
+    // Find bookings for a specific provider based on status, ordered by schedule time
+    Page<Booking> findByProviderIdAndStatusOrderByScheduledStartTimeAsc(Long providerId, BookingStatus status, Pageable pageable);
+
+    // Optional: Add methods for different sorting or fetching without pagination if needed later
+    // List<Booking> findBySeekerIdAndStatusOrderByScheduledStartTimeDesc(Long seekerId, BookingStatus status);
+    // List<Booking> findByProviderIdAndStatusOrderByScheduledStartTimeDesc(Long providerId, BookingStatus status);
+
+    // Optional: Find a booking by its unique booking number
+    // Optional<Booking> findByBookingNumber(String bookingNumber);
+}

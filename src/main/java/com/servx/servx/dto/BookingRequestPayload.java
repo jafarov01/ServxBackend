@@ -22,4 +22,6 @@ public class BookingRequestPayload {
     private Double priceMax;
 
     private String notes;
+
+    private Integer durationMinutes;
 }

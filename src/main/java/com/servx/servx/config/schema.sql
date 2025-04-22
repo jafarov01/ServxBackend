@@ -221,3 +221,32 @@ CREATE TABLE chat_messages
 -- Add indexes for efficient querying
 CREATE INDEX idx_chat_messages_service_request_id ON chat_messages (service_request_id);
 CREATE INDEX idx_chat_messages_timestamp ON chat_messages (timestamp);
+
+CREATE TABLE bookings
+(
+    id                    BIGSERIAL PRIMARY KEY,
+    booking_number        VARCHAR(255)             NOT NULL UNIQUE,
+    scheduled_start_time  TIMESTAMP WITH TIME ZONE NOT NULL,
+    duration_minutes      INTEGER                  NOT NULL,
+    price_min             NUMERIC(10, 2)           NOT NULL,
+    price_max             NUMERIC(10, 2)           NOT NULL,
+    notes                 TEXT,
+    location_address_line VARCHAR(255)             NOT NULL,
+    location_city         VARCHAR(100)             NOT NULL,
+    location_zip_code     VARCHAR(20)              NOT NULL,
+    location_country      VARCHAR(100)             NOT NULL,
+    status                VARCHAR(50)              NOT NULL,
+    created_at            TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at            TIMESTAMP WITH TIME ZONE NOT NULL,
+    service_id            INT                      NOT NULL REFERENCES services (id) ON DELETE CASCADE,
+    provider_id           INT                      NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    seeker_id             INT                      NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    service_request_id    INT                      NOT NULL UNIQUE REFERENCES service_requests (id) ON DELETE CASCADE,
+    CONSTRAINT check_booking_status CHECK (status IN
+                                           ('UPCOMING', 'COMPLETED', 'CANCELLED_BY_SEEKER', 'CANCELLED_BY_PROVIDER'))
+);
+
+-- Optional: Indexes for querying
+CREATE INDEX idx_bookings_provider_status ON bookings (provider_id, status);
+CREATE INDEX idx_bookings_seeker_status ON bookings (seeker_id, status);
+CREATE INDEX idx_bookings_start_time ON bookings (scheduled_start_time);

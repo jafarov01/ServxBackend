@@ -111,6 +111,13 @@ public class ServiceProfileService {
         return profileRepository.save(profile);
     }
 
+    @Transactional(readOnly = true) // Good practice for fetch methods
+    public ServiceProfileDTO getServiceProfileDtoById(Long profileId) {
+        ServiceProfile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new EntityNotFoundException("ServiceProfile not found with ID: " + profileId));
+        return new ServiceProfileDTO(profile);
+    }
+
     private ServiceProfileDTO createSingleProfile(User user, ServiceCategory category,
                                                   ServiceArea area, BulkServiceProfileRequestDTO request) {
         checkForDuplicateProfile(user, category, area);

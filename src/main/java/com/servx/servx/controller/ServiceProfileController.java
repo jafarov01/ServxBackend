@@ -28,6 +28,12 @@ public class ServiceProfileController {
         return ResponseEntity.ok(profileService.getServicesByCategoryAndSubcategory(categoryId, subcategoryId));
     }
 
+    @GetMapping("/{profileId}")
+    public ResponseEntity<ServiceProfileDTO> getServiceProfileById(@PathVariable Long profileId) {
+        ServiceProfileDTO profileDto = profileService.getServiceProfileDtoById(profileId);
+        return ResponseEntity.ok(profileDto);
+    }
+
     @PostMapping("/subcategories/{subcategoryId}/service-offers")
     public ResponseEntity<ServiceProfileDTO> createSingleServiceProfile(
             @PathVariable Long categoryId,

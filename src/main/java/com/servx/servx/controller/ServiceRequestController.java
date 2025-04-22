@@ -78,27 +78,27 @@ public class ServiceRequestController {
                 : serviceRequestService.getSeekerRequests(user.getId());
     }
 
-    @PostMapping("/{id}/confirm-booking")
+    @PostMapping("/{requestId}/confirm-booking/{messageId}")
     public ResponseEntity<ServiceRequestResponseDTO> confirmBooking(
-            @PathVariable("id") Long requestId,
+            @PathVariable("requestId") Long requestId,
+            @PathVariable("messageId") Long messageId, // Capture messageId
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        log.info("Received request to confirm booking for request ID: {}", requestId);
+        log.info("Received request to confirm booking for request ID {} from message ID {}", requestId, messageId);
         User seeker = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
-        // Service method handles validation and status update
-        ServiceRequestResponseDTO updatedRequest = serviceRequestService.confirmBooking(requestId, seeker);
+        // Pass messageId to the service
+        ServiceRequestResponseDTO updatedRequest = serviceRequestService.confirmBooking(requestId, messageId, seeker);
         return ResponseEntity.ok(updatedRequest);
     }
 
     @PostMapping("/{id}/reject-booking")
-    public ResponseEntity<ServiceRequestResponseDTO> rejectBooking( // Consider returning NO_CONTENT if preferred
-                                                                    @PathVariable("id") Long requestId,
-                                                                    @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<ServiceRequestResponseDTO> rejectBooking(
+            @PathVariable("id") Long requestId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         log.info("Received request to reject booking for request ID: {}", requestId);
         User seeker = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
-        // Service method handles validation and notification
         ServiceRequestResponseDTO updatedRequest = serviceRequestService.rejectBooking(requestId, seeker);
-        return ResponseEntity.ok(updatedRequest); // Return updated (or current) state
+        return ResponseEntity.ok(updatedRequest);
     }
 }

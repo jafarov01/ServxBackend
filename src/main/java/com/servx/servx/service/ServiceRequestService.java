@@ -1,17 +1,20 @@
 package com.servx.servx.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.servx.servx.dto.*;
 import com.servx.servx.entity.*;
 import com.servx.servx.exception.UnauthorizedAccessException;
+import com.servx.servx.repository.ChatMessageRepository;
 import com.servx.servx.repository.ServiceProfileRepository;
 import com.servx.servx.repository.ServiceRequestRepository;
-import com.servx.servx.repository.UserRepository;
 import com.servx.servx.util.ServiceRequestMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,7 +25,9 @@ import java.util.stream.Collectors;
 public class ServiceRequestService {
     private final ServiceRequestRepository serviceRequestRepository;
     private final ServiceProfileRepository serviceProfileRepository;
-    private final UserRepository userRepository;
+    private final ChatMessageRepository chatMessageRepository; // Inject Chat repo
+    private final BookingService bookingService; // Inject Booking service
+    private final ObjectMapper objectMapper;
     private final NotificationService notificationService;
     private final ServiceRequestMapper serviceRequestMapper;
 
@@ -84,93 +89,80 @@ public class ServiceRequestService {
         return serviceRequestMapper.toDto(updated);
     }
 
-    // --- NEW METHOD: Confirm Booking ---
     @Transactional
-    public ServiceRequestResponseDTO confirmBooking(Long requestId, User seeker) {
-        log.info("Attempting to confirm booking for request ID {} by seeker ID {}", requestId, seeker.getId());
+    public ServiceRequestResponseDTO confirmBooking(Long requestId, Long messageId, User seeker) {
+        log.info("Attempting to confirm booking for request ID {} from message ID {} by seeker ID {}", requestId, messageId, seeker.getId());
         ServiceRequest request = serviceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new EntityNotFoundException("Service Request not found with ID: " + requestId));
 
-        // Validation: Only the seeker for this request can confirm
         if (!request.getSeeker().getId().equals(seeker.getId())) {
-            log.warn("Unauthorized attempt to confirm booking for request {}. User {} is not the seeker.", requestId, seeker.getId());
             throw new UnauthorizedAccessException("Only the service seeker can confirm the booking.");
         }
-
-        // Validation: Can only confirm if currently ACCEPTED (or potentially another state if needed)
         if (request.getStatus() != ServiceRequest.RequestStatus.ACCEPTED) {
-            log.warn("Attempt to confirm booking for request {} failed. Status is not ACCEPTED, it is {}", requestId, request.getStatus());
             throw new IllegalStateException("Booking can only be confirmed if the request is currently accepted.");
         }
 
-        // --- Main Logic ---
-        // TODO: In the future, create a persistent Booking entity here if needed
-        // Booking booking = bookingRepository.save(new Booking(...));
-        // request.setBooking(booking); // Link request to booking
+        ChatMessage bookingMessage = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new EntityNotFoundException("Booking proposal chat message not found: " + messageId));
+
+        if (!bookingMessage.getServiceRequest().getId().equals(requestId)) {
+            throw new IllegalArgumentException("Message " + messageId + " does not belong to request " + requestId);
+        }
+        if (!StringUtils.hasText(bookingMessage.getBookingPayloadJson())) {
+            throw new IllegalStateException("Cannot confirm booking: Message " + messageId + " does not contain booking payload.");
+        }
+
+        BookingRequestPayload payload;
+        try {
+            payload = objectMapper.readValue(bookingMessage.getBookingPayloadJson(), BookingRequestPayload.class);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize booking payload from message {}: {}", messageId, e.getMessage());
+            throw new RuntimeException("Failed to read booking proposal details", e);
+        }
+
+        // Call BookingService to create the persistent Booking record
+        Booking createdBooking = bookingService.createBookingFromProposal(request, payload);
 
         // Update request status
         request.setStatus(ServiceRequest.RequestStatus.BOOKING_CONFIRMED);
         ServiceRequest updatedRequest = serviceRequestRepository.save(request);
-        log.info("Booking confirmed for request ID {}. Status updated to BOOKING_CONFIRMED.", requestId);
+        log.info("Booking confirmed for request ID {}. Status updated to BOOKING_CONFIRMED. Created Booking ID: {}", requestId, createdBooking.getId());
 
-        // --- Send Notification to Provider ---
         notificationService.createNotification(
-                request.getProvider(), // Notify the provider
+                request.getProvider(),
                 Notification.NotificationType.BOOKING_CONFIRMED,
-                new NotificationPayload(
-                        request.getId(),
-                        null, // bookingId if you created a Booking entity
-                        "Your booking proposal for request #"+request.getId()+" was confirmed by the client.",
-                        seeker.getId() // ID of the user who performed the action
-                )
+                new NotificationPayload(request.getId(), createdBooking.getId(), "Booking confirmed by " + seeker.getFirstName(), seeker.getId())
         );
 
         return serviceRequestMapper.toDto(updatedRequest);
     }
 
-    // --- NEW METHOD: Reject Booking ---
     @Transactional
     public ServiceRequestResponseDTO rejectBooking(Long requestId, User seeker) {
         log.info("Attempting to reject booking for request ID {} by seeker ID {}", requestId, seeker.getId());
         ServiceRequest request = serviceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new EntityNotFoundException("Service Request not found with ID: " + requestId));
 
-        // Validation: Only the seeker for this request can reject
         if (!request.getSeeker().getId().equals(seeker.getId())) {
             log.warn("Unauthorized attempt to reject booking for request {}. User {} is not the seeker.", requestId, seeker.getId());
             throw new UnauthorizedAccessException("Only the service seeker can reject the booking proposal.");
         }
 
-        // Validation: Can only reject if currently ACCEPTED (or maybe if PROPOSED state existed)
         if (request.getStatus() != ServiceRequest.RequestStatus.ACCEPTED) {
             log.warn("Attempt to reject booking for request {} failed. Status is not ACCEPTED, it is {}", requestId, request.getStatus());
             throw new IllegalStateException("Booking proposal can only be rejected if the request is currently accepted.");
         }
 
-        // --- Main Logic ---
-        // Decide what status to revert to. Let's go back to ACCEPTED
-        // meaning the request is still active but needs a new proposal/discussion.
-        // OR introduce a BOOKING_REJECTED status if needed.
-        // For now, let's just log it and keep status ACCEPTED. If status should change, uncomment below.
-        // request.setStatus(RequestStatus.ACCEPTED); // Or potentially a specific REJECTED status
-        // ServiceRequest updatedRequest = serviceRequestRepository.save(request);
-        log.info("Booking proposal rejected for request ID {}. Status remains ACCEPTED (or implement specific rejected state).", requestId);
+        // Status remains ACCEPTED upon rejection for now, allowing new proposals
+        log.info("Booking proposal rejected for request ID {}. Status remains ACCEPTED.", requestId);
 
-        // --- Send Notification to Provider ---
-        // Use REQUEST_DECLINED type, or create a specific BOOKING_REJECTED type
         notificationService.createNotification(
-                request.getProvider(), // Notify the provider
-                Notification.NotificationType.REQUEST_DECLINED, // Reusing this, or create BOOKING_REJECTED
-                new NotificationPayload(
-                        request.getId(),
-                        null,
-                        "Your booking proposal for request #"+request.getId()+" was declined by the client.",
-                        seeker.getId()
-                )
+                request.getProvider(),
+                Notification.NotificationType.REQUEST_DECLINED, // Reusing this type
+                new NotificationPayload(request.getId(), null, "Booking proposal for request #"+request.getId()+" was declined by the client.", seeker.getId())
         );
 
-        // Return current state (which might not have changed if keeping ACCEPTED)
-        return serviceRequestMapper.toDto(request); // Or updatedRequest if status changed
+        return serviceRequestMapper.toDto(request);
     }
 
     public ServiceRequestResponseDTO getRequestDetails(Long requestId, User user) {
