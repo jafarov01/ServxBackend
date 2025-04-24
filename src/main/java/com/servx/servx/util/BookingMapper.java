@@ -28,6 +28,7 @@ public class BookingMapper {
                 .priceMax(booking.getPriceMax())
                 .notes(booking.getNotes())
                 .status(booking.getStatus())
+                .providerMarkedComplete(booking.isProviderMarkedComplete())
                 .locationAddressLine(booking.getLocationAddressLine())
                 .locationCity(booking.getLocationCity())
                 .locationZipCode(booking.getLocationZipCode())

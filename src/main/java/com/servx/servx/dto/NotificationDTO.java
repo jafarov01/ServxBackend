@@ -22,7 +22,14 @@ public class NotificationDTO {
     private NotificationPayload payload;
 
     public enum NotificationType {
-        NEW_REQUEST, REQUEST_ACCEPTED, REQUEST_DECLINED,
-        BOOKING_CONFIRMED, SERVICE_COMPLETED, SYSTEM_ALERT
+        NEW_REQUEST,
+        REQUEST_ACCEPTED,
+        REQUEST_DECLINED,
+        BOOKING_CONFIRMED,
+        SERVICE_COMPLETED,
+        SYSTEM_ALERT,
+        BOOKING_CANCELLED,
+        PROVIDER_MARKED_COMPLETE,
+        SEEKER_CONFIRMED_COMPLETION
     }
 }

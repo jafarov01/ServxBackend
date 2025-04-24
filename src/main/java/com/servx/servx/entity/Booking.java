@@ -56,6 +56,10 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean providerMarkedComplete = false;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 

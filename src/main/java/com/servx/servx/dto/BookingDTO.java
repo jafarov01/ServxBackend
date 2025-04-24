@@ -17,6 +17,7 @@ public class BookingDTO {
     private Long id; // Booking ID
     private String bookingNumber;
     private BookingStatus status;
+    private boolean providerMarkedComplete;
 
     // Schedule Info
     private Instant scheduledStartTime;

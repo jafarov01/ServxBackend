@@ -1,9 +1,11 @@
 package com.servx.servx.util;
 
+import com.servx.servx.enums.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -15,42 +17,59 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity // Good to have
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
-    // No need to inject UserDetailsService, AuthenticationProvider etc. here
-    // as your JwtAuthFilter manually sets the SecurityContext
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable) // Disable CSRF for stateless API
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // === Existing Rules ===
-                        .requestMatchers(HttpMethod.POST, "/api/service-requests").hasAuthority("SERVICE_SEEKER")
-                        .requestMatchers(HttpMethod.GET, "/api/service-requests").hasAnyAuthority("SERVICE_SEEKER", "SERVICE_PROVIDER")
-                        .requestMatchers(HttpMethod.GET, "/api/service-requests/*").hasAnyAuthority("SERVICE_SEEKER", "SERVICE_PROVIDER") // More specific for ID path
-                        .requestMatchers(HttpMethod.PATCH, "/api/service-requests/*/accept").hasAuthority("SERVICE_PROVIDER") // Specific rule for accepting
-
-                        // === Chat API Rules ===
-                        .requestMatchers("/api/chats/**").authenticated() // Secure all chat REST endpoints
-
-                        // === Public Endpoints ===
+                        // --- PUBLIC Endpoints ---
+                        // Paths permitted for ANY HTTP method (or implied GET for static)
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 "/api/auth/verify-email",
-                                "/uploads/**", // Assuming uploads are public or handled differently
-                                "/ws/**"       // Allow initial WebSocket connection attempts (handshake)
+                                "/uploads/**",
+                                "/ws/**"
                         ).permitAll()
+                        // Specific GET requests permitted for anyone
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/service/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/service-profiles/**").permitAll()
 
-                        // === Default Rule ===
-                        .anyRequest().authenticated() // All other unspecified requests require authentication
+                        // --- ROLE-SPECIFIC Endpoints ---
+                        // Service Requests
+                        .requestMatchers(HttpMethod.POST, "/api/service-requests").hasAuthority(Role.SERVICE_SEEKER.name())
+                        .requestMatchers(HttpMethod.PATCH, "/api/service-requests/*/accept").hasAuthority(Role.SERVICE_PROVIDER.name())
+                        .requestMatchers(HttpMethod.POST, "/api/service-requests/*/confirm-booking/**", "/api/service-requests/*/reject-booking").hasAuthority(Role.SERVICE_SEEKER.name())
+                        // Booking Completion
+                        .requestMatchers(HttpMethod.POST, "/api/bookings/*/provider-complete").hasAuthority(Role.SERVICE_PROVIDER.name())
+                        .requestMatchers(HttpMethod.POST, "/api/bookings/*/seeker-confirm").hasAuthority(Role.SERVICE_SEEKER.name())
+                        // Review Submission
+                        .requestMatchers(HttpMethod.POST, "/api/reviews").hasAuthority(Role.SERVICE_SEEKER.name())
+                        // User Upgrade
+                        .requestMatchers(HttpMethod.POST, "/api/user/me/upgrade-to-provider").hasAuthority(Role.SERVICE_SEEKER.name())
+
+                        // --- AUTHENTICATED (Any Role) Endpoints ---
+                        .requestMatchers(HttpMethod.GET, "/api/service-requests", "/api/service-requests/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/bookings", "/api/bookings/by-date").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/bookings/*/cancel").authenticated()
+                        .requestMatchers("/api/chats/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/user/me").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/user/me", "/api/user/me/photo").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/user/me/photo").authenticated()
+                        .requestMatchers("/api/notifications/**").authenticated()
+
+
+                        // --- Default Rule ---
+                        .anyRequest().authenticated()
                 )
-                // Use stateless sessions as JWT is used
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // Add your custom JWT filter before the standard username/password filter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -58,7 +77,6 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Define the password encoder bean
         return new BCryptPasswordEncoder();
     }
 }

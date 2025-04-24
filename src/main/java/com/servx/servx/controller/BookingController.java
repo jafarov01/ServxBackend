@@ -16,7 +16,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -96,6 +98,74 @@ public class BookingController {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(bookings);
+    }
+
+    @PostMapping("/{bookingId}/provider-complete")
+    @PreAuthorize("isAuthenticated()") // Only authenticated users
+    public ResponseEntity<Void> markCompleteByProvider(
+            @PathVariable Long bookingId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        log.info("Received request from user {} to mark booking {} as complete (by provider).", userDetails.getUsername(), bookingId);
+        User providerUser = findUser(userDetails); // Reuse helper or inject service
+
+        // Simple check if user is actually a provider (could be more robust)
+        if (providerUser.getRole() != Role.SERVICE_PROVIDER) {
+            log.warn("User {} attempted provider action but has role {}", userDetails.getUsername(), providerUser.getRole());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // 403 Forbidden
+        }
+
+        try {
+            bookingService.markBookingCompletedByProvider(bookingId, providerUser);
+            return ResponseEntity.noContent().build(); // 204 No Content on success
+
+        } catch (EntityNotFoundException e) {
+            log.warn("Provider mark complete failed: Booking {} not found.", bookingId, e);
+            return ResponseEntity.notFound().build(); // 404 Not Found
+        } catch (UnauthorizedAccessException e) {
+            log.warn("Provider mark complete failed: User {} not authorized for booking {}.", providerUser.getId(), bookingId, e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // 403 Forbidden
+        } catch (IllegalStateException e) {
+            log.warn("Provider mark complete failed: Invalid state for booking {}.", bookingId, e);
+            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 409 Conflict (or 400 Bad Request)
+        } catch (Exception e) {
+            log.error("Unexpected error marking booking {} as complete by provider {}: {}", bookingId, providerUser.getId(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500 Internal Server Error
+        }
+    }
+
+    @PostMapping("/{bookingId}/seeker-confirm")
+    @PreAuthorize("isAuthenticated()") // Only authenticated users
+    public ResponseEntity<Void> confirmCompletionBySeeker(
+            @PathVariable Long bookingId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        log.info("Received request from user {} to confirm completion for booking {} (by seeker).", userDetails.getUsername(), bookingId);
+        User seekerUser = findUser(userDetails); // Reuse helper
+
+        // Optional check if user is actually a seeker
+        if (seekerUser.getRole() != Role.SERVICE_SEEKER) {
+            log.warn("User {} attempted seeker action but has role {}", userDetails.getUsername(), seekerUser.getRole());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        try {
+            bookingService.confirmCompletionBySeeker(bookingId, seekerUser);
+            return ResponseEntity.noContent().build(); // 204 No Content on success
+
+        } catch (EntityNotFoundException e) {
+            log.warn("Seeker confirm completion failed: Booking {} not found.", bookingId, e);
+            return ResponseEntity.notFound().build(); // 404 Not Found
+        } catch (UnauthorizedAccessException e) {
+            log.warn("Seeker confirm completion failed: User {} not authorized for booking {}.", seekerUser.getId(), bookingId, e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // 403 Forbidden
+        } catch (IllegalStateException e) {
+            log.warn("Seeker confirm completion failed: Invalid state for booking {}.", bookingId, e);
+            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 409 Conflict (or 400 Bad Request)
+        } catch (Exception e) {
+            log.error("Unexpected error confirming completion for booking {} by seeker {}: {}", bookingId, seekerUser.getId(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500 Internal Server Error
+        }
     }
 
     private User findUser(CustomUserDetails userDetails) {

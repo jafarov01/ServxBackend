@@ -89,6 +89,101 @@ public class BookingService {
         return new PageImpl<>(dtos, pageable, bookingPage.getTotalElements());
     }
 
+    public void markBookingCompletedByProvider(Long bookingId, User provider) {
+        log.info("Provider {} attempting to mark booking {} as completed.", provider.getId(), bookingId);
+
+        // 1. Fetch the booking
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new EntityNotFoundException("Booking not found with ID: " + bookingId));
+
+        // 2. Verify user is the correct provider
+        if (!booking.getProvider().getId().equals(provider.getId())) {
+            log.warn("Unauthorized attempt by user {} to mark booking {} as completed (provider is {}).",
+                    provider.getId(), bookingId, booking.getProvider().getId());
+            throw new UnauthorizedAccessException("User is not the provider for this booking.");
+        }
+
+        // 3. Verify booking status is UPCOMING
+        if (booking.getStatus() != BookingStatus.UPCOMING) {
+            log.warn("Cannot mark booking {} as completed by provider. Current status: {}", bookingId, booking.getStatus());
+            throw new IllegalStateException("Booking can only be marked as complete if status is UPCOMING.");
+        }
+
+        booking.setProviderMarkedComplete(true);
+        bookingRepository.save(booking);
+
+        // 4. Send notification to the Seeker
+        User seeker = booking.getSeeker();
+        log.info("Sending PROVIDER_MARKED_COMPLETE notification to seeker {} for booking {}", seeker.getId(), bookingId);
+        notificationService.createNotification(
+                seeker,
+                Notification.NotificationType.PROVIDER_MARKED_COMPLETE,
+                new NotificationPayload(
+                        booking.getServiceRequest().getId(),
+                        booking.getId(),
+                        String.format("Provider %s marked booking #%s as completed. Please confirm.",
+                                provider.getFirstName(), booking.getBookingNumber()),
+                        provider.getId()
+                )
+        );
+
+        log.info("Provider {} successfully marked booking {} as completed (pending seeker confirmation).", provider.getId(), bookingId);
+    }
+
+    public void confirmCompletionBySeeker(Long bookingId, User seeker) {
+        log.info("Seeker {} attempting to confirm completion for booking {}.", seeker.getId(), bookingId);
+
+        // 1. Fetch the booking
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new EntityNotFoundException("Booking not found with ID: " + bookingId));
+
+        // 2. Verify user is the correct seeker
+        if (!booking.getSeeker().getId().equals(seeker.getId())) {
+            log.warn("Unauthorized attempt by user {} to confirm completion for booking {} (seeker is {}).",
+                    seeker.getId(), bookingId, booking.getSeeker().getId());
+            throw new UnauthorizedAccessException("User is not the seeker for this booking.");
+        }
+
+        if (!booking.isProviderMarkedComplete()) {
+            log.warn("Seeker {} attempted to confirm booking {} before provider marked it complete.", seeker.getId(), bookingId);
+            throw new IllegalStateException("Provider has not marked this booking as complete yet.");
+        }
+
+        // 3. Verify booking status is UPCOMING
+        //    (Or PENDING_SEEKER_CONFIRMATION if you added an intermediate status)
+        if (booking.getStatus() != BookingStatus.UPCOMING) {
+            log.warn("Cannot confirm completion for booking {}. Current status: {}", bookingId, booking.getStatus());
+            // Allow confirmation even if COMPLETED already? Maybe return success without action?
+            // For now, strict check: only confirm if UPCOMING.
+            if (booking.getStatus() == BookingStatus.COMPLETED) {
+                log.info("Booking {} already completed, confirmation action redundant.", bookingId);
+                return; // Exit gracefully if already completed
+            }
+            throw new IllegalStateException("Booking can only be confirmed if status is UPCOMING.");
+        }
+
+        // 4. Update Booking Status to COMPLETED
+        booking.setStatus(BookingStatus.COMPLETED);
+        bookingRepository.save(booking); // Persist the change
+        log.info("Booking {} status updated to COMPLETED by seeker {}.", bookingId, seeker.getId());
+
+        // 5. (Optional) Send notification to the Provider
+        User provider = booking.getProvider();
+        log.info("Sending SEEKER_CONFIRMED_COMPLETION notification to provider {} for booking {}", provider.getId(), bookingId);
+        notificationService.createNotification(
+                provider, // Recipient
+                Notification.NotificationType.SEEKER_CONFIRMED_COMPLETION, // Use the new type
+                new NotificationPayload(
+                        booking.getServiceRequest().getId(),
+                        booking.getId(),
+                        String.format("Seeker %s confirmed completion for booking #%s.",
+                                seeker.getFirstName(), booking.getBookingNumber()), // message
+                        seeker.getId() // userId (who initiated confirmation)
+                )
+        );
+        log.info("Completion confirmation notification sent to provider {}", provider.getId());
+    }
+
     @Transactional
     public void cancelBooking(Long bookingId, User cancellingUser) {
         log.info("User {} attempting to cancel booking {}", cancellingUser.getId(), bookingId);

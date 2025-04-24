@@ -40,10 +40,15 @@ public class ChatService {
 
     @Transactional
     public ChatMessageDTO saveMessage(ChatMessageDTO dto, String senderEmail) {
+
+        log.info("Saving message with senderEmail: {}", senderEmail);
+
         User sender = userRepository.findByEmailIgnoreCase(senderEmail)
                 .orElseThrow(() -> new UserNotFoundException("Sender not found: " + senderEmail));
         ServiceRequest request = serviceRequestRepository.findById(dto.getServiceRequestId())
                 .orElseThrow(() -> new EntityNotFoundException("ServiceRequest not found: " + dto.getServiceRequestId()));
+
+        log.info("Fetched sender: ID={}, Email={}", sender.getId(), sender.getEmail());
 
         if (!isChatActive(request.getStatus())) {
             log.warn("Attempted to send message for inactive request {}. Status: {}", request.getId(), request.getStatus());
