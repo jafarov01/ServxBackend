@@ -26,7 +26,7 @@ public class ServiceProfile {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_area_id", nullable = false)
-    private ServiceArea serviceArea;  // Renamed from 'subcategory' for clarity
+    private ServiceArea serviceArea;
 
     @Column(nullable = false, length = 50)
     private String workExperience;

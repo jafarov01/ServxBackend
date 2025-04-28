@@ -27,7 +27,6 @@ public class CreateServiceProfileRequestDTO {
     @DecimalMin(value = "0.01", message = "Price must be at least 0.01")
     private Double price;
 
-    // Constructor with all arguments
     public CreateServiceProfileRequestDTO(Long categoryId, Long serviceAreaId, String workExperience, Double price) {
         this.categoryId = categoryId;
         this.serviceAreaId = serviceAreaId;

@@ -27,7 +27,7 @@ public class JwtUtils {
         return Jwts.builder()
                 .setSubject(email)
                 .claim("role", role)
-                .claim("userId", userId)  // Add userId as claim
+                .claim("userId", userId)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(secretKey)
@@ -39,7 +39,7 @@ public class JwtUtils {
             Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
             return true;
         } catch (JwtException e) {
-            log.error("JWT validation failed: {}", e.getMessage()); // ← Add this line
+            log.error("JWT validation failed: {}", e.getMessage());
             return false;
         }
     }
@@ -53,13 +53,12 @@ public class JwtUtils {
                 .getSubject();
     }
 
-    // Extract userId from JWT token
     public Long extractUserId(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(secretKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-        return claims.get("userId", Long.class);  // Assuming "userId" is part of the claims
+        return claims.get("userId", Long.class);
     }
 }

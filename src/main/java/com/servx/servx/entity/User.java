@@ -47,22 +47,22 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private Role role = Role.SERVICE_SEEKER;  // Default value added
+    private Role role = Role.SERVICE_SEEKER;
 
     @Column(nullable = true, length = 100)
     private String education;
 
-    @CreationTimestamp  // Auto-populates on creation
+    @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;  // Added missing field
+    private LocalDateTime createdAt;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, optional = false)
     @JoinColumn(name = "address_id", referencedColumnName = "id", unique = true, nullable = false)
-    @ToString.Exclude  // Optional: Avoid recursion in toString()
+    @ToString.Exclude
     private Address address;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude  // Optional: Avoid recursion in toString()
+    @ToString.Exclude
     private List<Language> languagesSpoken;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

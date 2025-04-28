@@ -38,7 +38,6 @@ public class UserService {
     @Value("${app.upload-dir}")
     private String uploadDir;
 
-    // Fetch user details without explicitly passing userId
     @Transactional(readOnly = true)
     public UserResponseDTO getUserDetails(Long userId) {
         User user = userRepository.findById(userId)
@@ -47,25 +46,19 @@ public class UserService {
         return mapToUserResponseDTO(user);
     }
 
-    // Update profile photo and return its URL
     @Transactional
     public String updateProfilePhoto(Long userId, MultipartFile file) {
-        // Validate user existence
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
 
-        // Generate file name
         String fileName = "profile-" + userId + "." + getFileExtension(file);
         Path filePath = Paths.get(uploadDir, fileName);
 
         try {
-            // Create directory if not exists
             Files.createDirectories(filePath.getParent());
 
-            // Save the file
             file.transferTo(filePath.toFile());
 
-            // Update user's profile photo URL
             String photoUrl = "/uploads/" + fileName;
             user.setProfilePhotoUrl(photoUrl);
             userRepository.save(user);
@@ -77,7 +70,6 @@ public class UserService {
         }
     }
 
-    // upgrade to service provider
     @Transactional
     public UserResponseDTO upgradeToProvider(Long userId, String education) {
         User user = userRepository.findById(userId)
@@ -98,20 +90,17 @@ public class UserService {
         return mapToUserResponseDTO(savedUser);
     }
 
-    // Delete profile photo
     @Transactional
     public DeletePhotoResponseDTO deleteProfilePhoto(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
 
-        // Delete the file from server
         String photoUrl = user.getProfilePhotoUrl();
         File file = new File(uploadDir + File.separator + photoUrl);
         if (file.exists()) {
             boolean delete = file.delete();
         }
 
-        // Set profile photo URL to default
         user.setProfilePhotoUrl("/images/default-profile.jpg");
         userRepository.save(user);
 
@@ -123,29 +112,24 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
 
-        // Update basic fields
         user.setFirstName(updateRequest.getFirstName());
         user.setLastName(updateRequest.getLastName());
         user.setPhoneNumber(updateRequest.getPhoneNumber());
 
-        // Update address (assuming Address is a nested entity in User)
         Address address = user.getAddress();
         address.setAddressLine(updateRequest.getAddress().getAddressLine());
         address.setCity(updateRequest.getAddress().getCity());
         address.setZipCode(updateRequest.getAddress().getZipCode());
         address.setCountry(updateRequest.getAddress().getCountry());
 
-        // Save and return
         return mapToUserResponseDTO(userRepository.save(user));
     }
 
-    // Helper method to get file extension
     private String getFileExtension(MultipartFile file) {
         String filename = file.getOriginalFilename();
         return filename.substring(filename.lastIndexOf(".") + 1);
     }
 
-    // Map User to UserResponseDTO
     private UserResponseDTO mapToUserResponseDTO(User user) {
         if (user == null) return null;
 
@@ -185,7 +169,7 @@ public class UserService {
             return null;
         }
         if (path.toLowerCase().startsWith("http://") || path.toLowerCase().startsWith("https://")) {
-            return path; // Already absolute
+            return path;
         }
         String cleanBaseUrl = baseUrl.replaceAll("/$", "");
         String cleanPath = path.startsWith("/") ? path : "/" + path;

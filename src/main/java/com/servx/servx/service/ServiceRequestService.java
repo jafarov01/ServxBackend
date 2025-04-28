@@ -25,8 +25,8 @@ import java.util.stream.Collectors;
 public class ServiceRequestService {
     private final ServiceRequestRepository serviceRequestRepository;
     private final ServiceProfileRepository serviceProfileRepository;
-    private final ChatMessageRepository chatMessageRepository; // Inject Chat repo
-    private final BookingService bookingService; // Inject Booking service
+    private final ChatMessageRepository chatMessageRepository;
+    private final BookingService bookingService;
     private final ObjectMapper objectMapper;
     private final NotificationService notificationService;
     private final ServiceRequestMapper serviceRequestMapper;
@@ -54,12 +54,12 @@ public class ServiceRequestService {
                 Notification.NotificationType.NEW_REQUEST,
                 new NotificationPayload(
                         savedRequest.getId(),
-                        null,  // bookingId if available
+                        null,
                         "New service request from " + (authenticatedUser.getFirstName() + " " + authenticatedUser.getLastName()),
                         authenticatedUser.getId()
                 )
         );
-        return serviceRequestMapper.toDto(savedRequest); // Using ServiceRequestMapper
+        return serviceRequestMapper.toDto(savedRequest);
     }
 
     @Transactional
@@ -74,7 +74,6 @@ public class ServiceRequestService {
         request.setStatus(ServiceRequest.RequestStatus.ACCEPTED);
         ServiceRequest updated = serviceRequestRepository.save(request);
 
-        // Create notification for seeker
         notificationService.createNotification(
                 request.getSeeker(),
                 Notification.NotificationType.REQUEST_ACCEPTED,
@@ -120,10 +119,8 @@ public class ServiceRequestService {
             throw new RuntimeException("Failed to read booking proposal details", e);
         }
 
-        // Call BookingService to create the persistent Booking record
         Booking createdBooking = bookingService.createBookingFromProposal(request, payload);
 
-        // Update request status
         request.setStatus(ServiceRequest.RequestStatus.BOOKING_CONFIRMED);
         ServiceRequest updatedRequest = serviceRequestRepository.save(request);
         log.info("Booking confirmed for request ID {}. Status updated to BOOKING_CONFIRMED. Created Booking ID: {}", requestId, createdBooking.getId());
@@ -153,12 +150,11 @@ public class ServiceRequestService {
             throw new IllegalStateException("Booking proposal can only be rejected if the request is currently accepted.");
         }
 
-        // Status remains ACCEPTED upon rejection for now, allowing new proposals
         log.info("Booking proposal rejected for request ID {}. Status remains ACCEPTED.", requestId);
 
         notificationService.createNotification(
                 request.getProvider(),
-                Notification.NotificationType.REQUEST_DECLINED, // Reusing this type
+                Notification.NotificationType.REQUEST_DECLINED,
                 new NotificationPayload(request.getId(), null, "Booking proposal for request #"+request.getId()+" was declined by the client.", seeker.getId())
         );
 
@@ -171,7 +167,7 @@ public class ServiceRequestService {
 
         validateRequestAccess(request, user);
 
-        return serviceRequestMapper.toDto(request); // Using ServiceRequestMapper
+        return serviceRequestMapper.toDto(request);
     }
 
     public List<ServiceRequestResponseDTO> getProviderRequests(Long providerId) {

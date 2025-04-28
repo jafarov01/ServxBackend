@@ -16,14 +16,14 @@ import lombok.*;
 public class Language {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.Include  // Include only the ID
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     @ToString.Exclude
-    private User user; // Each language is associated with one user.
+    private User user;
 
     @Column(nullable = false, length = 3)
-    private String language; // ISO 639-1 language code (e.g., "en", "az").
+    private String language; // ISO 639-1 language code
 }

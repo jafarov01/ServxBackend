@@ -6,7 +6,7 @@ import com.servx.servx.repository.ServiceProfileRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
+import org.springframework.beans.factory.annotation.Value;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -15,6 +15,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ServiceRequestMapper {
     private final ServiceProfileRepository serviceProfileRepository;
+
+    @Value("${app.base-url}")
+    private String appBaseUrl;
 
     public ServiceRequestResponseDTO toDto(ServiceRequest request) {
 
@@ -28,20 +31,16 @@ public class ServiceRequestMapper {
                 .description(request.getDescription())
                 .severity(request.getSeverity())
                 .status(request.getStatus())
-                .address(mapAddressToDTO(request.getAddress())) // Use existing helper
-                .createdAt(request.getCreatedAt()) // Assuming correct type mapping
+                .address(mapAddressToDTO(request.getAddress()))
+                .createdAt(request.getCreatedAt())
 
-                // *** THE FIX ***
-                // Use the constructor of ServiceProfileDTO directly
                 .service(new ServiceProfileDTO(serviceEntity))
 
-                .provider(mapUserToDTO(request.getProvider())) // Use existing helper
-                .seeker(mapUserToDTO(request.getSeeker()))     // Use existing helper
+                .provider(mapUserToDTO(request.getProvider()))
+                .seeker(mapUserToDTO(request.getSeeker()))
                 .build();
     }
 
-    // Maps Address entity to AddressResponseDTO - Stays the same
-    // Added null check
     public AddressResponseDTO mapAddressToDTO(RequestAddress address) {
         if (address == null) return null;
         return new AddressResponseDTO(
@@ -52,8 +51,6 @@ public class ServiceRequestMapper {
         );
     }
 
-    // Maps AddressRequestDTO to RequestAddress - Stays the same
-    // Added null check
     public RequestAddress mapAddress(AddressRequestDTO addressDTO) {
         if (addressDTO == null) return null;
         return RequestAddress.builder()
@@ -64,9 +61,10 @@ public class ServiceRequestMapper {
                 .build();
     }
 
-    // Maps User entity to UserResponseDTO - Stays the same
-    // Added null checks for safety
     private UserResponseDTO mapUserToDTO(User user) {
+        String baseUrl = appBaseUrl;
+
+
         if (user == null) return null;
 
         AddressResponseDTO addressDTO = null;
@@ -83,7 +81,7 @@ public class ServiceRequestMapper {
                 user.getLanguagesSpoken().stream()
                         .map(Language::getLanguage)
                         .collect(Collectors.toList()) :
-                Collections.emptyList(); // Use empty list if null
+                Collections.emptyList();
 
         return UserResponseDTO.builder()
                 .id(user.getId())
@@ -91,12 +89,23 @@ public class ServiceRequestMapper {
                 .lastName(user.getLastName())
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
-                .profilePhotoUrl(user.getProfilePhotoUrl())
+                .profilePhotoUrl(constructFullUrl(baseUrl, user.getProfilePhotoUrl()))
                 .languagesSpoken(languages)
                 .address(addressDTO)
-                .role(user.getRole() != null ? user.getRole().name() : null) // Handle null role
+                .role(user.getRole() != null ? user.getRole().name() : null)
                 .education(user.getEducation())
                 .build();
     }
 
+    private String constructFullUrl(String baseUrl, String path) {
+        if (path == null || path.isBlank() || baseUrl == null || baseUrl.isBlank()) {
+            return null;
+        }
+        if (path.toLowerCase().startsWith("http://") || path.toLowerCase().startsWith("https://")) {
+            return path;
+        }
+        String cleanBaseUrl = baseUrl.replaceAll("/$", "");
+        String cleanPath = path.startsWith("/") ? path : "/" + path;
+        return cleanBaseUrl + cleanPath;
+    }
 }

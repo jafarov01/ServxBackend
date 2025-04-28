@@ -19,5 +19,6 @@ public class ChatConversationDTO {
     private String lastMessage;
     private Instant lastMessageTimestamp;
     private long unreadCount;
-    private ServiceRequest.RequestStatus requestStatus; // Include status to know if chat is active
+    private String otherParticipantPhotoUrl;
+    private ServiceRequest.RequestStatus requestStatus;
 }

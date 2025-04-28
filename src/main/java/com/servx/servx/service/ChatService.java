@@ -14,6 +14,7 @@ import com.servx.servx.repository.ChatMessageRepository;
 import com.servx.servx.repository.ServiceRequestRepository;
 import com.servx.servx.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +37,10 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final UserRepository userRepository;
-    private final ObjectMapper objectMapper; // Inject ObjectMapper
+    private final ObjectMapper objectMapper;
+
+    @Value("${app.base-url}")
+    private String appBaseUrl;
 
     @Transactional
     public ChatMessageDTO saveMessage(ChatMessageDTO dto, String senderEmail) {
@@ -104,6 +108,8 @@ public class ChatService {
 
     @Transactional(readOnly = true)
     public List<ChatConversationDTO> getUserConversations(Long userId) {
+
+
         log.info("Fetching conversations for user ID: {}", userId);
 
         List<ServiceRequest> seekerRequests = serviceRequestRepository.findBySeekerIdOrderByCreatedAtDesc(userId);
@@ -136,6 +142,7 @@ public class ChatService {
                             .otherParticipantId(otherParticipant.getId())
                             .lastMessage(lastMessageOpt.map(ChatMessage::getContent).orElse("No messages yet"))
                             .lastMessageTimestamp(timestampForDto)
+                            .otherParticipantPhotoUrl(constructFullUrl(appBaseUrl, otherParticipant.getProfilePhotoUrl()))
                             .unreadCount(unreadCount)
                             .requestStatus(request.getStatus())
                             .build();
@@ -167,7 +174,7 @@ public class ChatService {
                 .content(message.getContent())
                 .timestamp(message.getTimestamp())
                 .isRead(message.isRead())
-                .recipientEmail(message.getRecipient().getEmail()); // Add recipient email
+                .recipientEmail(message.getRecipient().getEmail());
 
         if (StringUtils.hasText(message.getBookingPayloadJson())) {
             try {
@@ -193,13 +200,23 @@ public class ChatService {
     }
 
     private boolean isChatActive(ServiceRequest.RequestStatus status) {
-        // Use the RequestStatus enum defined in ServiceRequest entity
         return status == ServiceRequest.RequestStatus.ACCEPTED
                 || status == ServiceRequest.RequestStatus.BOOKING_CONFIRMED;
     }
 
-    // Print helper (if needed, otherwise remove)
     private void print(String message) {
         System.out.println(message);
+    }
+
+    private String constructFullUrl(String baseUrl, String path) {
+        if (path == null || path.isBlank() || baseUrl == null || baseUrl.isBlank()) {
+            return null;
+        }
+        if (path.toLowerCase().startsWith("http://") || path.toLowerCase().startsWith("https://")) {
+            return path;
+        }
+        String cleanBaseUrl = baseUrl.replaceAll("/$", "");
+        String cleanPath = path.startsWith("/") ? path : "/" + path;
+        return cleanBaseUrl + cleanPath;
     }
 }

@@ -25,4 +25,28 @@ public class EmailService {
         email.setText("Please verify your email by clicking the link: " + verificationUrl);
         mailSender.send(email);
     }
+    @Async
+    public void sendPasswordResetEmail(String to, String name, String resetLink) {
+        SimpleMailMessage email = new SimpleMailMessage();
+        email.setTo(to);
+        email.setSubject("Servx Password Reset Request");
+        email.setText("Hello " + name + ",\n\nYou requested a password reset. Please click the link below to set a new password. This link is valid for 1 hour.\n\n" + resetLink + "\n\nIf you did not request a password reset, please ignore this email.");
+        try {
+            mailSender.send(email);
+        } catch (Exception ignored) {
+        }
+    }
+
+    @Async
+    public void sendPasswordResetConfirmationEmail(String to, String name) {
+        SimpleMailMessage email = new SimpleMailMessage();
+        email.setTo(to);
+        email.setSubject("Servx Password Reset Confirmation");
+        email.setText("Hello " + name + ",\n\nYou have successfully reset your password.");
+        try {
+            mailSender.send(email);
+        } catch (Exception ignored) {
+
+        }
+    }
 }

@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional // Default transactionality for the service
+@Transactional
 @Slf4j
 public class BookingService {
 
@@ -33,7 +33,6 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final BookingMapper bookingMapper;
 
-    // Method called by ServiceRequestService when a booking is confirmed
     public Booking createBookingFromProposal(ServiceRequest request, BookingRequestPayload payload) {
         log.info("Creating Booking from payload for ServiceRequest ID: {}", request.getId());
 
@@ -47,8 +46,8 @@ public class BookingService {
                 .bookingNumber(bookingNumber)
                 .scheduledStartTime(payload.getAgreedDateTime())
                 .durationMinutes(payload.getDurationMinutes())
-                .priceMin(payload.getPriceMin() != null ? payload.getPriceMin() : request.getService().getPrice()) // Fallback to service price?
-                .priceMax(payload.getPriceMax() != null ? payload.getPriceMax() : payload.getPriceMin()) // Default max to min
+                .priceMin(payload.getPriceMin() != null ? payload.getPriceMin() : request.getService().getPrice())
+                .priceMax(payload.getPriceMax() != null ? payload.getPriceMax() : payload.getPriceMin())
                 .notes(payload.getNotes())
                 .locationAddressLine(request.getAddress().getAddressLine())
                 .locationCity(request.getAddress().getCity())
@@ -71,9 +70,8 @@ public class BookingService {
         log.info("Fetching {} bookings for provider ID {}", status, provider.getId());
         Page<Booking> bookingPage = bookingRepository.findByProviderIdAndStatusOrderByScheduledStartTimeAsc(provider.getId(), status, pageable);
         log.info("Found {} bookings on page {} for provider ID {}", bookingPage.getNumberOfElements(), pageable.getPageNumber(), provider.getId());
-        // Map Page<Entity> to Page<DTO>
         List<BookingDTO> dtos = bookingPage.getContent().stream()
-                .map(booking -> bookingMapper.toDto(booking)) // Use mapper
+                .map(booking -> bookingMapper.toDto(booking))
                 .collect(Collectors.toList());
         return new PageImpl<>(dtos, pageable, bookingPage.getTotalElements());
     }
@@ -84,7 +82,7 @@ public class BookingService {
         Page<Booking> bookingPage = bookingRepository.findBySeekerIdAndStatusOrderByScheduledStartTimeAsc(seeker.getId(), status, pageable);
         log.info("Found {} bookings on page {} for seeker ID {}", bookingPage.getNumberOfElements(), pageable.getPageNumber(), seeker.getId());
         List<BookingDTO> dtos = bookingPage.getContent().stream()
-                .map(bookingMapper::toDto) // Use mapper
+                .map(bookingMapper::toDto)
                 .collect(Collectors.toList());
         return new PageImpl<>(dtos, pageable, bookingPage.getTotalElements());
     }
@@ -92,18 +90,15 @@ public class BookingService {
     public void markBookingCompletedByProvider(Long bookingId, User provider) {
         log.info("Provider {} attempting to mark booking {} as completed.", provider.getId(), bookingId);
 
-        // 1. Fetch the booking
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new EntityNotFoundException("Booking not found with ID: " + bookingId));
 
-        // 2. Verify user is the correct provider
         if (!booking.getProvider().getId().equals(provider.getId())) {
             log.warn("Unauthorized attempt by user {} to mark booking {} as completed (provider is {}).",
                     provider.getId(), bookingId, booking.getProvider().getId());
             throw new UnauthorizedAccessException("User is not the provider for this booking.");
         }
 
-        // 3. Verify booking status is UPCOMING
         if (booking.getStatus() != BookingStatus.UPCOMING) {
             log.warn("Cannot mark booking {} as completed by provider. Current status: {}", bookingId, booking.getStatus());
             throw new IllegalStateException("Booking can only be marked as complete if status is UPCOMING.");
@@ -112,7 +107,6 @@ public class BookingService {
         booking.setProviderMarkedComplete(true);
         bookingRepository.save(booking);
 
-        // 4. Send notification to the Seeker
         User seeker = booking.getSeeker();
         log.info("Sending PROVIDER_MARKED_COMPLETE notification to seeker {} for booking {}", seeker.getId(), bookingId);
         notificationService.createNotification(
@@ -133,11 +127,9 @@ public class BookingService {
     public void confirmCompletionBySeeker(Long bookingId, User seeker) {
         log.info("Seeker {} attempting to confirm completion for booking {}.", seeker.getId(), bookingId);
 
-        // 1. Fetch the booking
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new EntityNotFoundException("Booking not found with ID: " + bookingId));
 
-        // 2. Verify user is the correct seeker
         if (!booking.getSeeker().getId().equals(seeker.getId())) {
             log.warn("Unauthorized attempt by user {} to confirm completion for booking {} (seeker is {}).",
                     seeker.getId(), bookingId, booking.getSeeker().getId());
@@ -149,36 +141,30 @@ public class BookingService {
             throw new IllegalStateException("Provider has not marked this booking as complete yet.");
         }
 
-        // 3. Verify booking status is UPCOMING
-        //    (Or PENDING_SEEKER_CONFIRMATION if you added an intermediate status)
         if (booking.getStatus() != BookingStatus.UPCOMING) {
             log.warn("Cannot confirm completion for booking {}. Current status: {}", bookingId, booking.getStatus());
-            // Allow confirmation even if COMPLETED already? Maybe return success without action?
-            // For now, strict check: only confirm if UPCOMING.
             if (booking.getStatus() == BookingStatus.COMPLETED) {
                 log.info("Booking {} already completed, confirmation action redundant.", bookingId);
-                return; // Exit gracefully if already completed
+                return;
             }
             throw new IllegalStateException("Booking can only be confirmed if status is UPCOMING.");
         }
 
-        // 4. Update Booking Status to COMPLETED
         booking.setStatus(BookingStatus.COMPLETED);
-        bookingRepository.save(booking); // Persist the change
+        bookingRepository.save(booking);
         log.info("Booking {} status updated to COMPLETED by seeker {}.", bookingId, seeker.getId());
 
-        // 5. (Optional) Send notification to the Provider
         User provider = booking.getProvider();
         log.info("Sending SEEKER_CONFIRMED_COMPLETION notification to provider {} for booking {}", provider.getId(), bookingId);
         notificationService.createNotification(
-                provider, // Recipient
-                Notification.NotificationType.SEEKER_CONFIRMED_COMPLETION, // Use the new type
+                provider,
+                Notification.NotificationType.SEEKER_CONFIRMED_COMPLETION,
                 new NotificationPayload(
                         booking.getServiceRequest().getId(),
                         booking.getId(),
                         String.format("Seeker %s confirmed completion for booking #%s.",
-                                seeker.getFirstName(), booking.getBookingNumber()), // message
-                        seeker.getId() // userId (who initiated confirmation)
+                                seeker.getFirstName(), booking.getBookingNumber()),
+                        seeker.getId()
                 )
         );
         log.info("Completion confirmation notification sent to provider {}", provider.getId());
@@ -190,11 +176,9 @@ public class BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new EntityNotFoundException("Booking not found with ID: " + bookingId));
 
-        // Determine who the other party is for notification
         User otherParty;
         BookingStatus cancelledStatus;
 
-        // Check if canceller is the seeker or provider
         if (booking.getSeeker().getId().equals(cancellingUser.getId())) {
             cancelledStatus = BookingStatus.CANCELLED_BY_SEEKER;
             otherParty = booking.getProvider();
@@ -207,7 +191,6 @@ public class BookingService {
             throw new UnauthorizedAccessException("User " + cancellingUser.getId() + " cannot cancel booking " + bookingId);
         }
 
-        // Check if booking can be cancelled (e.g., only UPCOMING bookings)
         if (booking.getStatus() != BookingStatus.UPCOMING) {
             throw new IllegalStateException("Booking cannot be cancelled as it is not in UPCOMING status (current: " + booking.getStatus() + ")");
         }
@@ -215,10 +198,9 @@ public class BookingService {
         booking.setStatus(cancelledStatus);
         bookingRepository.save(booking);
 
-        // Send notification to the other party
         notificationService.createNotification(
                 otherParty,
-                Notification.NotificationType.BOOKING_CANCELLED, // Add this type to NotificationType enum
+                Notification.NotificationType.BOOKING_CANCELLED,
                 new NotificationPayload(
                         booking.getServiceRequest().getId(),
                         booking.getId(),
@@ -232,9 +214,8 @@ public class BookingService {
     @Transactional(readOnly = true)
     public List<BookingDTO> getProviderBookingsByDateRange(User provider, LocalDate startDate, LocalDate endDate) {
         log.info("Fetching bookings for provider ID {} from {} to {}", provider.getId(), startDate, endDate);
-        // Calculate time range in UTC (start of startDate to start of day *after* endDate)
         Instant startInstant = startDate.atStartOfDay().toInstant(ZoneOffset.UTC);
-        Instant endInstant = endDate.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC); // Exclusive end
+        Instant endInstant = endDate.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
 
         List<Booking> bookings = bookingRepository.findByProviderIdAndScheduledStartTimeBetweenOrderByScheduledStartTimeAsc(
                 provider.getId(), startInstant, endInstant
@@ -247,7 +228,7 @@ public class BookingService {
     public List<BookingDTO> getSeekerBookingsByDateRange(User seeker, LocalDate startDate, LocalDate endDate) {
         log.info("Fetching bookings for seeker ID {} from {} to {}", seeker.getId(), startDate, endDate);
         Instant startInstant = startDate.atStartOfDay().toInstant(ZoneOffset.UTC);
-        Instant endInstant = endDate.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC); // Exclusive end
+        Instant endInstant = endDate.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
 
         List<Booking> bookings = bookingRepository.findBySeekerIdAndScheduledStartTimeBetweenOrderByScheduledStartTimeAsc(
                 seeker.getId(), startInstant, endInstant
@@ -256,10 +237,9 @@ public class BookingService {
         return mapBookingListToDto(bookings);
     }
 
-    // Helper method to map list (can reuse if needed)
     private List<BookingDTO> mapBookingListToDto(List<Booking> bookings) {
         return bookings.stream()
-                .map(bookingMapper::toDto) // Use your existing mapper
+                .map(bookingMapper::toDto)
                 .collect(Collectors.toList());
     }
 }

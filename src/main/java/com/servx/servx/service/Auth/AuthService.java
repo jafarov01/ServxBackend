@@ -1,38 +1,38 @@
 package com.servx.servx.service.Auth;
 
 import com.servx.servx.dto.*;
-import com.servx.servx.entity.Address;
-import com.servx.servx.entity.Language;
-import com.servx.servx.entity.User;
-import com.servx.servx.entity.VerificationToken;
+import com.servx.servx.entity.*;
 import com.servx.servx.enums.Role;
 import com.servx.servx.exception.*;
-import com.servx.servx.repository.AddressRepository;
-import com.servx.servx.repository.LanguageRepository;
-import com.servx.servx.repository.UserRepository;
-import com.servx.servx.repository.VerificationTokenRepository;
+import com.servx.servx.repository.*;
 import com.servx.servx.util.JwtUtils;
+import org.springframework.beans.factory.annotation.Value;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
     private final UserRepository userRepository;
-    private final LanguageRepository languageRepository;
-    private final AddressRepository addressRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final VerificationTokenService verificationTokenService;
     private final VerificationTokenRepository verificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final JwtUtils jwtUtils;
 
+    @Value("${app.frontend.base-url}")
+    private String frontendBaseUrl;
+
     public UserResponseDTO register(RegisterRequestDTO request) {
-        // Check for existing email/phone
+        // check for existing email/phone
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException("Email is already in use");
         }
@@ -40,7 +40,6 @@ public class AuthService {
             throw new PhoneNumberExistsException("Phone number already in use");
         }
 
-        // Build User with Address
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -58,16 +57,14 @@ public class AuthService {
                         .build())
                 .build();
 
-        // Set languages (List<String> to List<Language>)
         user.setLanguagesSpoken(
                 request.getLanguagesSpoken().stream()
                         .map(lang -> Language.builder().user(user).language(lang).build())  // Map strings to Language entities
                         .collect(Collectors.toList())
         );
 
-        userRepository.save(user);  // Persist user with address and languages
+        userRepository.save(user);
 
-        // Send verification email
         String verificationToken = verificationTokenService.createVerificationToken(user.getId()).getToken();
         emailService.sendVerificationEmail(user, verificationToken);
 
@@ -115,6 +112,65 @@ public class AuthService {
 
         return ResponseEntity.ok("Email verified successfully.");
     }
+
+    public void initiatePasswordReset(String email) {
+        Optional<User> userOptional = userRepository.findByEmailIgnoreCase(email);
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            String token = UUID.randomUUID().toString();
+            PasswordResetToken resetToken = new PasswordResetToken(token, user);
+
+             List<PasswordResetToken> existingTokens = passwordResetTokenRepository.findByUser(user);
+             if (!existingTokens.isEmpty()) {
+                 passwordResetTokenRepository.deleteAll(existingTokens);
+             }
+
+            passwordResetTokenRepository.save(resetToken);
+
+            String resetLink = frontendBaseUrl + "/reset-password.html?token=" + token;
+
+            try {
+                emailService.sendPasswordResetEmail(user.getEmail(), user.getFirstName(), resetLink);
+            } catch (Exception ignored) {
+            }
+
+        }
+    }
+
+    public void completePasswordReset(String token, String newPassword) {
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> {
+                    return new InvalidTokenException("Invalid password reset token provided.");
+                });
+
+        if (resetToken.isExpired()) {
+            passwordResetTokenRepository.delete(resetToken);
+            throw new InvalidTokenException("Password reset token has expired.");
+        }
+
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new InvalidPasswordException("Password must be at least 8 characters long.");
+        }
+
+        User user = resetToken.getUser();
+        if (user == null) {
+            passwordResetTokenRepository.delete(resetToken);
+            throw new InvalidTokenException("Invalid token state: No associated user.");
+        }
+
+
+        String hashedPassword = passwordEncoder.encode(newPassword);
+        user.setPassword(hashedPassword);
+        userRepository.save(user);
+
+        passwordResetTokenRepository.delete(resetToken);
+
+        emailService.sendPasswordResetConfirmationEmail(user.getEmail(), user.getFirstName());
+    }
+
 
     private Role validateAndGetRole(String roleStr) {
         if (roleStr == null || roleStr.isEmpty()) {

@@ -30,57 +30,49 @@ public class ReviewService {
     private final ServiceProfileRepository serviceProfileRepository;
     private final ReviewMapper reviewMapper;
 
-    @Transactional // Ensure review saving and aggregate update are atomic
+    @Transactional
     public void submitReview(User seeker, ReviewRequestDTO reviewRequest) {
         log.info("Attempting review submission by user {} for booking {}", seeker.getId(), reviewRequest.getBookingId());
 
-        // 1. Fetch the Booking
         Booking booking = bookingRepository.findById(reviewRequest.getBookingId())
                 .orElseThrow(() -> new EntityNotFoundException("Booking not found with ID: " + reviewRequest.getBookingId()));
 
-        // 2. Verify User is the Seeker for this Booking
         if (!booking.getSeeker().getId().equals(seeker.getId())) {
             log.warn("Unauthorized review attempt: User {} is not the seeker for booking {}.", seeker.getId(), booking.getId());
             throw new UnauthorizedAccessException("User is not authorized to review this booking.");
         }
 
-        // 3. Verify Booking Status is COMPLETED
         if (booking.getStatus() != BookingStatus.COMPLETED) {
             log.warn("Review attempt on non-completed booking {}. Status: {}", booking.getId(), booking.getStatus());
             throw new IllegalStateException("Reviews can only be submitted for completed bookings.");
         }
 
-        // 4. Check if Review already exists for this booking by this user
         if (reviewRepository.existsByBookingIdAndUserId(booking.getId(), seeker.getId())) {
             log.warn("Duplicate review attempt by user {} for booking {}.", seeker.getId(), booking.getId());
             throw new DuplicateEntryException("You have already submitted a review for this booking.");
         }
 
-        // 5. Create and Save the Review entity
         Review newReview = Review.builder()
-                .booking(booking) // Link to the booking
-                .service(booking.getService()) // Link to the specific service profile
-                .user(seeker) // Link to the reviewer (seeker)
+                .booking(booking)
+                .service(booking.getService())
+                .user(seeker)
                 .rating(reviewRequest.getRating())
                 .comment(reviewRequest.getComment())
-                // createdAt will be set automatically by @CreationTimestamp
                 .build();
         reviewRepository.save(newReview);
         log.info("Review saved successfully for booking {}.", booking.getId());
 
-        // 6. Update ServiceProfile aggregates (rating sum and review count)
-        ServiceProfile serviceProfile = booking.getService(); // Already fetched via Booking relationship
-        // Ensure thread safety if needed, though @Transactional helps
+        ServiceProfile serviceProfile = booking.getService();
         serviceProfile.setReviewCount(serviceProfile.getReviewCount() + 1);
-        serviceProfile.setRating(serviceProfile.getRating() + reviewRequest.getRating()); // Add new rating to sum
+        serviceProfile.setRating(serviceProfile.getRating() + reviewRequest.getRating());
         serviceProfileRepository.save(serviceProfile);
         log.info("Updated aggregates for ServiceProfile {}. New count: {}, New rating sum: {}",
                 serviceProfile.getId(), serviceProfile.getReviewCount(), serviceProfile.getRating());
 
-        // Optionally: Send notification to provider about new review?
+        // TODO: sending notification to provider about new review
     }
 
-    @Transactional(readOnly = true) // Read-only transaction
+    @Transactional(readOnly = true)
     public Page<ReviewDTO> getReviewsForService(Long serviceId, Pageable pageable) {
         log.info("Fetching reviews for serviceId {} with pagination: {}", serviceId, pageable);
 

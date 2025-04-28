@@ -5,7 +5,6 @@ import com.servx.servx.service.UserService;
 import com.servx.servx.util.JwtUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,9 +14,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
-    private final JwtUtils jwtUtils; // Inject the JwtUtils service
+    private final JwtUtils jwtUtils;
 
-    // upgrade to service provider endpoint
     @PostMapping("/me/upgrade-to-provider")
     public ResponseEntity<UserResponseDTO> upgradeToProvider(
             @RequestHeader("Authorization") String authorizationHeader,
@@ -33,9 +31,8 @@ public class UserController {
     // Get user details
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getUserDetails(@RequestHeader("Authorization") String authorizationHeader) {
-        // Extract userId from the JWT token
         String token = authorizationHeader.replace("Bearer ", "");
-        Long userId = jwtUtils.extractUserId(token); // Extract userId from JWT token
+        Long userId = jwtUtils.extractUserId(token);
 
         UserResponseDTO userDetails = userService.getUserDetails(userId);
         return ResponseEntity.ok(userDetails);
@@ -47,7 +44,6 @@ public class UserController {
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestParam("file") MultipartFile file) {
 
-        // Extract userId from the JWT token
         String token = authorizationHeader.replace("Bearer ", "");
         Long userId = jwtUtils.extractUserId(token);
 
@@ -58,7 +54,6 @@ public class UserController {
     // Delete profile photo
     @DeleteMapping("/me/photo")
     public ResponseEntity<DeletePhotoResponseDTO> deleteProfilePhoto(@RequestHeader("Authorization") String authorizationHeader) {
-        // Extract userId from the JWT token
         String token = authorizationHeader.replace("Bearer ", "");
         Long userId = jwtUtils.extractUserId(token);
 
@@ -71,11 +66,9 @@ public class UserController {
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody UpdateUserRequestDTO updateRequest) {
 
-        // Extract userId from JWT
         String token = authorizationHeader.replace("Bearer ", "");
         Long userId = jwtUtils.extractUserId(token);
 
-        // Delegate to service
         UserResponseDTO updatedUser = userService.updateUserDetails(userId, updateRequest);
         return ResponseEntity.ok(updatedUser);
     }

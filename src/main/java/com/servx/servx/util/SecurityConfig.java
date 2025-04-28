@@ -29,15 +29,18 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // --- PUBLIC Endpoints ---
-                        // Paths permitted for ANY HTTP method (or implied GET for static)
+                        // Paths permitted for ANY HTTP method
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
+                                "/api/auth/forgot-password",
+                                "api/auth/reset-password",
                                 "/api/auth/verify-email",
                                 "/uploads/**",
-                                "/ws/**"
+                                "/ws/**",
+                                "reset-password.html"
                         ).permitAll()
-                        // Specific GET requests permitted for anyone
+                        // GET requests permitted for anyone
                         .requestMatchers(HttpMethod.GET, "/api/reviews/service/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/service-profiles/**").permitAll()

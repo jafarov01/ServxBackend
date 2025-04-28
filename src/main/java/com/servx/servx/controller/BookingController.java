@@ -34,7 +34,6 @@ public class BookingController {
     private final BookingService bookingService;
     private final UserRepository userRepository;
 
-    // Example: Get bookings based on role and status query parameter
     @GetMapping
     public ResponseEntity<Page<BookingDTO>> getMyBookings(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -52,7 +51,7 @@ public class BookingController {
             bookings = bookingService.getSeekerBookings(user, status, pageable);
         } else {
             log.warn("User {} has unexpected role {}", user.getEmail(), user.getRole());
-            return ResponseEntity.badRequest().build(); // Or forbidden
+            return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(bookings);
     }
@@ -67,11 +66,9 @@ public class BookingController {
 
         try {
             bookingService.cancelBooking(bookingId, cancellingUser);
-            return ResponseEntity.noContent().build(); // Indicate success with no content
+            return ResponseEntity.noContent().build();
         } catch (EntityNotFoundException | UnauthorizedAccessException | IllegalStateException e) {
             log.warn("Failed to cancel booking {}: {}", bookingId, e.getMessage());
-            // Consider returning different statuses based on error (e.g., 403 Forbidden, 404 Not Found, 409 Conflict)
-            // For simplicity, return 400 Bad Request for now
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             log.error("Unexpected error cancelling booking {}", bookingId, e);
@@ -79,14 +76,14 @@ public class BookingController {
         }
     }
 
-    @GetMapping("/by-date") // Define a distinct path for this query
+    @GetMapping("/by-date")
     public ResponseEntity<List<BookingDTO>> getMyBookingsByDateRange(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate, // Expect YYYY-MM-DD
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {   // Expect YYYY-MM-DD
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         log.info("Fetching bookings for user {} from {} to {}", userDetails.getUsername(), startDate, endDate);
-        User user = findUser(userDetails); // Use helper method
+        User user = findUser(userDetails);
 
         List<BookingDTO> bookings;
         if (user.getRole() == Role.SERVICE_PROVIDER) {
@@ -101,49 +98,47 @@ public class BookingController {
     }
 
     @PostMapping("/{bookingId}/provider-complete")
-    @PreAuthorize("isAuthenticated()") // Only authenticated users
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> markCompleteByProvider(
             @PathVariable Long bookingId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         log.info("Received request from user {} to mark booking {} as complete (by provider).", userDetails.getUsername(), bookingId);
-        User providerUser = findUser(userDetails); // Reuse helper or inject service
+        User providerUser = findUser(userDetails);
 
-        // Simple check if user is actually a provider (could be more robust)
         if (providerUser.getRole() != Role.SERVICE_PROVIDER) {
             log.warn("User {} attempted provider action but has role {}", userDetails.getUsername(), providerUser.getRole());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // 403 Forbidden
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
         try {
             bookingService.markBookingCompletedByProvider(bookingId, providerUser);
-            return ResponseEntity.noContent().build(); // 204 No Content on success
+            return ResponseEntity.noContent().build();
 
         } catch (EntityNotFoundException e) {
             log.warn("Provider mark complete failed: Booking {} not found.", bookingId, e);
-            return ResponseEntity.notFound().build(); // 404 Not Found
+            return ResponseEntity.notFound().build();
         } catch (UnauthorizedAccessException e) {
             log.warn("Provider mark complete failed: User {} not authorized for booking {}.", providerUser.getId(), bookingId, e);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // 403 Forbidden
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         } catch (IllegalStateException e) {
             log.warn("Provider mark complete failed: Invalid state for booking {}.", bookingId, e);
-            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 409 Conflict (or 400 Bad Request)
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         } catch (Exception e) {
             log.error("Unexpected error marking booking {} as complete by provider {}: {}", bookingId, providerUser.getId(), e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500 Internal Server Error
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PostMapping("/{bookingId}/seeker-confirm")
-    @PreAuthorize("isAuthenticated()") // Only authenticated users
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> confirmCompletionBySeeker(
             @PathVariable Long bookingId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         log.info("Received request from user {} to confirm completion for booking {} (by seeker).", userDetails.getUsername(), bookingId);
-        User seekerUser = findUser(userDetails); // Reuse helper
+        User seekerUser = findUser(userDetails);
 
-        // Optional check if user is actually a seeker
         if (seekerUser.getRole() != Role.SERVICE_SEEKER) {
             log.warn("User {} attempted seeker action but has role {}", userDetails.getUsername(), seekerUser.getRole());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -151,20 +146,20 @@ public class BookingController {
 
         try {
             bookingService.confirmCompletionBySeeker(bookingId, seekerUser);
-            return ResponseEntity.noContent().build(); // 204 No Content on success
+            return ResponseEntity.noContent().build();
 
         } catch (EntityNotFoundException e) {
             log.warn("Seeker confirm completion failed: Booking {} not found.", bookingId, e);
-            return ResponseEntity.notFound().build(); // 404 Not Found
+            return ResponseEntity.notFound().build();
         } catch (UnauthorizedAccessException e) {
             log.warn("Seeker confirm completion failed: User {} not authorized for booking {}.", seekerUser.getId(), bookingId, e);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // 403 Forbidden
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         } catch (IllegalStateException e) {
             log.warn("Seeker confirm completion failed: Invalid state for booking {}.", bookingId, e);
-            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 409 Conflict (or 400 Bad Request)
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         } catch (Exception e) {
             log.error("Unexpected error confirming completion for booking {} by seeker {}: {}", bookingId, seekerUser.getId(), e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500 Internal Server Error
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

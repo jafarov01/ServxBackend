@@ -10,8 +10,6 @@ import java.util.List;
 
 @Repository
 public interface ServiceAreaRepository extends JpaRepository<ServiceArea, Long> {
-
-    // Find areas by category ID with JPQL for explicit control
     @Query("SELECT sa FROM ServiceArea sa WHERE sa.category.id = :categoryId")
     List<ServiceArea> findByCategoryId(@Param("categoryId") Long categoryId);
 }

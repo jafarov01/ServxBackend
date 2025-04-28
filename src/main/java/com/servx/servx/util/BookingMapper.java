@@ -34,16 +34,16 @@ public class BookingMapper {
                 .locationZipCode(booking.getLocationZipCode())
                 .locationCountry(booking.getLocationCountry())
                 .serviceRequestId(booking.getServiceRequest().getId())
-                // Provider fields
+                // provider fields
                 .providerId(booking.getProvider().getId())
                 .providerFirstName(booking.getProvider().getFirstName())
                 .providerLastName(booking.getProvider().getLastName())
-                .providerProfilePhotoUrl(constructFullUrl(baseUrl, booking.getProvider().getProfilePhotoUrl()))                // Seeker fields
+                .providerProfilePhotoUrl(constructFullUrl(baseUrl, booking.getProvider().getProfilePhotoUrl()))
                 .seekerId(booking.getSeeker().getId())
                 .seekerFirstName(booking.getSeeker().getFirstName())
                 .seekerLastName(booking.getSeeker().getLastName())
                 .seekerProfilePhotoUrl(constructFullUrl(baseUrl, booking.getSeeker().getProfilePhotoUrl()))
-                // Service fields
+                // service fields
                 .serviceId(booking.getService().getId())
                 .serviceName(getServiceName(booking.getService()))
                 .serviceCategoryName(booking.getService().getCategory().getName())
@@ -51,19 +51,15 @@ public class BookingMapper {
     }
 
     private String constructFullUrl(String baseUrl, String path) {
-        // If path is null/blank, or if it already seems absolute, return it as is (or null)
         if (path == null || path.isBlank()) {
             return null;
         }
         if (path.toLowerCase().startsWith("http://") || path.toLowerCase().startsWith("https://")) {
-            return path; // Already absolute
+            return path;
         }
-        // Ensure base URL is valid and doesn't end with '/'
         String cleanBaseUrl = (baseUrl != null && !baseUrl.isBlank()) ? baseUrl.replaceAll("/$", "") : "";
-        // Ensure path starts with '/'
         String cleanPath = path.startsWith("/") ? path : "/" + path;
 
-        // Only construct if base URL is present
         return cleanBaseUrl.isEmpty() ? null : cleanBaseUrl + cleanPath;
     }
 

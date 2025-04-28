@@ -6,8 +6,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ServiceCategoryRepository extends JpaRepository<ServiceCategory, Long> {
-
-    // Built-in methods:
-    // findAll() - already exists
-    // findById() - already exists
 }

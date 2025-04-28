@@ -1,4 +1,4 @@
--- Create Addresses Table (required for the Users table's foreign key)
+-- Create Addresses Table
 CREATE TABLE addresses
 (
     id           SERIAL PRIMARY KEY,
@@ -20,10 +20,19 @@ CREATE TABLE users
     profile_photo_url VARCHAR(255) DEFAULT '/images/default-profile.jpg' NOT NULL,
     is_verified       BOOLEAN      DEFAULT FALSE                         NOT NULL,
     role              VARCHAR(20)  DEFAULT 'SERVICE_SEEKER'              NOT NULL CHECK (role IN ('SERVICE_SEEKER', 'SERVICE_PROVIDER')),
-    education         VARCHAR(100),                                                -- Nullable for ServiceSeeker
+    education         VARCHAR(100),
     created_at        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-    address_id        INT UNIQUE                                         NOT NULL, -- One-to-One constraint
+    address_id        INT UNIQUE                                         NOT NULL,
     FOREIGN KEY (address_id) REFERENCES addresses (id) ON DELETE CASCADE
+);
+
+CREATE TABLE password_reset_tokens
+(
+    id          BIGSERIAL PRIMARY KEY,
+    token       VARCHAR(255) UNIQUE NOT NULL,
+    user_id     BIGINT              NOT NULL,
+    expiry_date TIMESTAMP           NOT NULL,
+    CONSTRAINT fk_password_reset_token_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 -- Create Service Categories Table
@@ -104,65 +113,51 @@ VALUES (1, 'Cleaning'),
 
 -- Insert Service Areas (Subcategories)
 INSERT INTO service_areas (id, category_id, name)
-VALUES
-    -- Cleaning
-    (1, 1, 'Deep Cleaning'),
-    (2, 1, 'Carpet Cleaning'),
-    (3, 1, 'Window Cleaning'),
-    (4, 1, 'Office Cleaning'),
-    (5, 1, 'Industrial Cleaning'),
-    (6, 1, 'Upholstery Cleaning'),
-    (7, 1, 'Floor Cleaning'),
-
-    -- Repairing
-    (8, 2, 'Electronics Repair'),
-    (9, 2, 'Appliance Repair'),
-    (10, 2, 'Plumbing Repair'),
-    (11, 2, 'HVAC Repair'),
-    (12, 2, 'Car Repair'),
-    (13, 2, 'Computer Repair'),
-    (14, 2, 'Furniture Repair'),
-
-    -- Laundry
-    (15, 3, 'Dry Cleaning'),
-    (16, 3, 'Wash and Fold'),
-    (17, 3, 'Ironing Service'),
-    (18, 3, 'Clothing Alterations'),
-    (19, 3, 'Shoe Repair'),
-
-    -- Painting
-    (20, 4, 'Interior Painting'),
-    (21, 4, 'Exterior Painting'),
-    (22, 4, 'Wall Murals'),
-    (23, 4, 'Furniture Painting'),
-    (24, 4, 'Fence Painting'),
-
-    -- Appliance
-    (25, 5, 'Air Conditioner Repair'),
-    (26, 5, 'Refrigerator Repair'),
-    (27, 5, 'Washing Machine Repair'),
-    (28, 5, 'Water Heater Repair'),
-    (29, 5, 'TV Repair'),
-    (30, 5, 'Microwave Repair'),
-    (31, 5, 'Chimney Repair'),
-    (32, 5, 'Dishwasher Repair'),
-    (33, 5, 'Others'),
-
-    -- Plumbing
-    (34, 6, 'Leak Repair'),
-    (35, 6, 'Pipe Installation'),
-    (36, 6, 'Drain Cleaning'),
-    (37, 6, 'Toilet Repair'),
-    (38, 6, 'Water Heater Installation'),
-    (39, 6, 'Faucet Repair'),
-
-    -- Shifting
-    (40, 7, 'Local Moving'),
-    (41, 7, 'Long-Distance Moving'),
-    (42, 7, 'Office Moving'),
-    (43, 7, 'Furniture Moving'),
-    (44, 7, 'Packing Services'),
-    (45, 7, 'Storage Services');
+VALUES (1, 1, 'Deep Cleaning'),
+       (2, 1, 'Carpet Cleaning'),
+       (3, 1, 'Window Cleaning'),
+       (4, 1, 'Office Cleaning'),
+       (5, 1, 'Industrial Cleaning'),
+       (6, 1, 'Upholstery Cleaning'),
+       (7, 1, 'Floor Cleaning'),
+       (8, 2, 'Electronics Repair'),
+       (9, 2, 'Appliance Repair'),
+       (10, 2, 'Plumbing Repair'),
+       (11, 2, 'HVAC Repair'),
+       (12, 2, 'Car Repair'),
+       (13, 2, 'Computer Repair'),
+       (14, 2, 'Furniture Repair'),
+       (15, 3, 'Dry Cleaning'),
+       (16, 3, 'Wash and Fold'),
+       (17, 3, 'Ironing Service'),
+       (18, 3, 'Clothing Alterations'),
+       (19, 3, 'Shoe Repair'),
+       (20, 4, 'Interior Painting'),
+       (21, 4, 'Exterior Painting'),
+       (22, 4, 'Wall Murals'),
+       (23, 4, 'Furniture Painting'),
+       (24, 4, 'Fence Painting'),
+       (25, 5, 'Air Conditioner Repair'),
+       (26, 5, 'Refrigerator Repair'),
+       (27, 5, 'Washing Machine Repair'),
+       (28, 5, 'Water Heater Repair'),
+       (29, 5, 'TV Repair'),
+       (30, 5, 'Microwave Repair'),
+       (31, 5, 'Chimney Repair'),
+       (32, 5, 'Dishwasher Repair'),
+       (33, 5, 'Others'),
+       (34, 6, 'Leak Repair'),
+       (35, 6, 'Pipe Installation'),
+       (36, 6, 'Drain Cleaning'),
+       (37, 6, 'Toilet Repair'),
+       (38, 6, 'Water Heater Installation'),
+       (39, 6, 'Faucet Repair'),
+       (40, 7, 'Local Moving'),
+       (41, 7, 'Long-Distance Moving'),
+       (42, 7, 'Office Moving'),
+       (43, 7, 'Furniture Moving'),
+       (44, 7, 'Packing Services'),
+       (45, 7, 'Storage Services');
 
 CREATE TABLE service_requests
 (
@@ -224,30 +219,62 @@ CREATE INDEX idx_chat_messages_timestamp ON chat_messages (timestamp);
 
 CREATE TABLE bookings
 (
-    id                    BIGSERIAL PRIMARY KEY,
-    booking_number        VARCHAR(255)             NOT NULL UNIQUE,
-    scheduled_start_time  TIMESTAMP WITH TIME ZONE NOT NULL,
-    duration_minutes      INTEGER                  NOT NULL,
-    price_min             NUMERIC(10, 2)           NOT NULL,
-    price_max             NUMERIC(10, 2)           NOT NULL,
-    notes                 TEXT,
-    location_address_line VARCHAR(255)             NOT NULL,
-    location_city         VARCHAR(100)             NOT NULL,
-    location_zip_code     VARCHAR(20)              NOT NULL,
-    location_country      VARCHAR(100)             NOT NULL,
-    status                VARCHAR(50) NOT NULL,
-    provider_marked_complete BOOLEAN DEFAULT FALSE NOT NULL,
-    created_at            TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at            TIMESTAMP WITH TIME ZONE NOT NULL,
-    service_id            INT                      NOT NULL REFERENCES services (id) ON DELETE CASCADE,
-    provider_id           INT                      NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    seeker_id             INT                      NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    service_request_id    INT                      NOT NULL UNIQUE REFERENCES service_requests (id) ON DELETE CASCADE,
+    id                       BIGSERIAL PRIMARY KEY,
+    booking_number           VARCHAR(255)             NOT NULL UNIQUE,
+    scheduled_start_time     TIMESTAMP WITH TIME ZONE NOT NULL,
+    duration_minutes         INTEGER                  NOT NULL,
+    price_min                NUMERIC(10, 2)           NOT NULL,
+    price_max                NUMERIC(10, 2)           NOT NULL,
+    notes                    TEXT,
+    location_address_line    VARCHAR(255)             NOT NULL,
+    location_city            VARCHAR(100)             NOT NULL,
+    location_zip_code        VARCHAR(20)              NOT NULL,
+    location_country         VARCHAR(100)             NOT NULL,
+    status                   VARCHAR(50)              NOT NULL,
+    provider_marked_complete BOOLEAN DEFAULT FALSE    NOT NULL,
+    created_at               TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at               TIMESTAMP WITH TIME ZONE NOT NULL,
+    service_id               INT                      NOT NULL REFERENCES services (id) ON DELETE CASCADE,
+    provider_id              INT                      NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    seeker_id                INT                      NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    service_request_id       INT                      NOT NULL UNIQUE REFERENCES service_requests (id) ON DELETE CASCADE,
     CONSTRAINT check_booking_status CHECK (status IN
                                            ('UPCOMING', 'COMPLETED', 'CANCELLED_BY_SEEKER', 'CANCELLED_BY_PROVIDER'))
 );
 
--- Optional: Indexes for querying
 CREATE INDEX idx_bookings_provider_status ON bookings (provider_id, status);
 CREATE INDEX idx_bookings_seeker_status ON bookings (seeker_id, status);
 CREATE INDEX idx_bookings_start_time ON bookings (scheduled_start_time);
+
+-- Index on city column in addresses table
+CREATE INDEX idx_addresses_city ON addresses (city);
+
+-- Index on zip_code column in addresses table
+CREATE INDEX idx_addresses_zip_code ON addresses (zip_code);
+
+-- Index on the foreign key column user_id in services table
+CREATE INDEX idx_services_user_id ON services (user_id);
+
+-- Index on the foreign key column service_category_id in services table
+CREATE INDEX idx_services_category_id ON services (service_category_id);
+
+-- Index on the foreign key column service_area_id in services table
+CREATE INDEX idx_services_area_id ON services (service_area_id);
+
+CREATE
+EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Index for searching service area names (e.g., "Leak Repair")
+CREATE INDEX idx_gin_service_areas_name ON service_areas USING gin (name gin_trgm_ops);
+
+-- Index for searching service category names (e.g., "Plumbing") - UNIQUE index already exists, but GIN is better for LIKE
+-- You might add this one too if you search categories often with LIKE
+CREATE INDEX idx_gin_service_categories_name ON service_categories USING gin (name gin_trgm_ops);
+
+-- Index for searching provider first names
+CREATE INDEX idx_gin_users_first_name ON users USING gin (first_name gin_trgm_ops);
+
+-- Index for searching provider last names
+CREATE INDEX idx_gin_users_last_name ON users USING gin (last_name gin_trgm_ops);
+
+CREATE INDEX idx_gin_users_fullname ON users USING gin ((first_name || ' ' || last_name) gin_trgm_ops);

@@ -3,6 +3,7 @@ package com.servx.servx.controller;
 import com.servx.servx.dto.ReviewDTO;
 import com.servx.servx.dto.ReviewRequestDTO;
 import com.servx.servx.entity.User;
+import com.servx.servx.enums.Role;
 import com.servx.servx.exception.DuplicateEntryException;
 import com.servx.servx.exception.UnauthorizedAccessException;
 import com.servx.servx.exception.UserNotFoundException;
@@ -33,8 +34,8 @@ public class ReviewController {
     private final UserRepository userRepository; // To lookup user from principal
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()") // Only logged-in users can submit reviews
-    public ResponseEntity<?> submitReview( // Return ResponseEntity<?> for flexible error handling
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> submitReview(
                                            @AuthenticationPrincipal CustomUserDetails userDetails,
                                            @Valid @RequestBody ReviewRequestDTO reviewRequest) {
 
@@ -48,33 +49,30 @@ public class ReviewController {
             User seeker = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
                     .orElseThrow(() -> new UserNotFoundException("User not found: " + userDetails.getUsername()));
 
-            // Optional: Check if user is a seeker? Though service layer verifies ownership.
-            // if(seeker.getRole() != Role.SERVICE_SEEKER) { return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); }
+            if(seeker.getRole() != Role.SERVICE_SEEKER) { return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); }
 
             reviewService.submitReview(seeker, reviewRequest);
-            // Return 201 Created on successful submission
             return ResponseEntity.status(HttpStatus.CREATED).build();
 
         } catch (EntityNotFoundException e) {
             log.warn("Review submission failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage()); // 404
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (UnauthorizedAccessException e) {
             log.warn("Review submission failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage()); // 403
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (IllegalStateException e) {
             log.warn("Review submission failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()); // 400 (e.g., booking not completed)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (DuplicateEntryException e) {
             log.warn("Review submission failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage()); // 409 (already reviewed)
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (Exception e) {
             log.error("Unexpected error submitting review from user {}: {}", userDetails.getUsername(), e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An internal error occurred."); // 500
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An internal error occurred.");
         }
     }
 
     @GetMapping("/service/{serviceId}")
-    // No @PreAuthorize needed? Reviews are likely public. Add if needed.
     public ResponseEntity<Page<ReviewDTO>> getReviewsForService(
             @PathVariable Long serviceId,
             @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -84,7 +82,6 @@ public class ReviewController {
             Page<ReviewDTO> reviewDtoPage = reviewService.getReviewsForService(serviceId, pageable);
             return ResponseEntity.ok(reviewDtoPage);
         } catch (Exception e) {
-            // Generic error handling, consider more specific catches if needed
             log.error("Error fetching reviews for serviceId {}: {}", serviceId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

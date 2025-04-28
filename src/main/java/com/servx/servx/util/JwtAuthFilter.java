@@ -55,10 +55,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     throw new InsufficientAuthenticationException("User not verified");
                 }
 
-                // Create CustomUserDetails and set it as the principal
                 CustomUserDetails customUserDetails = new CustomUserDetails(user);
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        customUserDetails,  // Set CustomUserDetails as principal
+                        customUserDetails,
                         null,
                         Collections.singleton(new SimpleGrantedAuthority(user.getRole().name()))
                 );

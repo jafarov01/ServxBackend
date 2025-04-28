@@ -4,7 +4,9 @@ import com.servx.servx.entity.ServiceArea;
 import com.servx.servx.entity.ServiceCategory;
 import com.servx.servx.entity.ServiceProfile;
 import com.servx.servx.entity.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -13,7 +15,6 @@ import java.util.List;
 @Repository
 public interface ServiceProfileRepository extends JpaRepository<ServiceProfile, Long> {
 
-    // Existing methods
     List<ServiceProfile> findByCategory_IdAndServiceArea_Id(
             @Param("categoryId") Long categoryId,
             @Param("serviceAreaId") Long serviceAreaId
@@ -21,13 +22,32 @@ public interface ServiceProfileRepository extends JpaRepository<ServiceProfile, 
 
     List<ServiceProfile> findByCategory_Id(@Param("categoryId") Long categoryId);
 
-    // New method for duplicate check
     boolean existsByUserAndCategoryAndServiceArea(
             User user,
             ServiceCategory category,
             ServiceArea serviceArea
     );
 
-    // Optional: Find all profiles for a user
-    List<ServiceProfile> findByUser(User user);
+    @Query("SELECT sp FROM ServiceProfile sp " +
+            "JOIN sp.user u " +
+            "JOIN u.address a " +
+            "WHERE u.role = 'SERVICE_PROVIDER' " +
+            "AND LOWER(a.city) = LOWER(:city)")
+    List<ServiceProfile> findByProviderCity(@Param("city") String city, Pageable pageable);
+
+    @Query("SELECT DISTINCT sp FROM ServiceProfile sp " +
+            "JOIN sp.user u " +
+            "JOIN u.address a " +
+            "JOIN sp.category sc " +
+            "JOIN sp.serviceArea sa " +
+            "WHERE u.role = 'SERVICE_PROVIDER' AND (" +
+            "  LOWER(a.city) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "  LOWER(a.zipCode) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "  LOWER(u.firstName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "  LOWER(u.lastName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "  LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "  LOWER(sc.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "  LOWER(sa.name) LIKE LOWER(CONCAT('%', :query, '%'))" +
+            ")")
+    List<ServiceProfile> searchProfiles(@Param("query") String query);
 }

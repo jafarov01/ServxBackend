@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReviewMapper {
 
-    // Inject base URL for photo URLs
     @Value("${app.base-url}")
     private String appBaseUrl;
 
@@ -19,7 +18,7 @@ public class ReviewMapper {
             return null;
         }
 
-        User reviewer = review.getUser(); // Get the user who wrote the review
+        User reviewer = review.getUser();
         String reviewerName = "Unknown User";
         String reviewerFirstName = "";
         String reviewerLastName = "";
@@ -30,9 +29,8 @@ public class ReviewMapper {
             reviewerLastName = reviewer.getLastName() != null ? reviewer.getLastName() : "";
             reviewerName = (reviewerFirstName + " " + reviewerLastName).trim();
             if (reviewerName.isEmpty()) {
-                reviewerName = "Servx User"; // Fallback name
+                reviewerName = "Servx User";
             }
-            // Construct the full photo URL using the helper
             photoUrl = constructFullUrl(appBaseUrl, reviewer.getProfilePhotoUrl());
         }
 
@@ -40,7 +38,7 @@ public class ReviewMapper {
                 .id(review.getId())
                 .rating(review.getRating())
                 .comment(review.getComment())
-                .createdAt(review.getCreatedAt()) // Pass Instant directly, Jackson handles formatting
+                .createdAt(review.getCreatedAt())
                 .reviewerName(reviewerName)
                 .reviewerFirstName(reviewerFirstName)
                 .reviewerLastName(reviewerLastName)
@@ -48,19 +46,16 @@ public class ReviewMapper {
                 .build();
     }
 
-    // Helper to map a Page of entities to a Page of DTOs
-    // Uses the built-in map function of the Page interface
     public Page<ReviewDTO> toDtoPage(Page<Review> reviewPage) {
         return reviewPage.map(this::toDto);
     }
 
-    // Helper function to safely construct the full URL (same as in other mappers)
     private String constructFullUrl(String baseUrl, String path) {
         if (path == null || path.isBlank() || baseUrl == null || baseUrl.isBlank()) {
             return null;
         }
         if (path.toLowerCase().startsWith("http://") || path.toLowerCase().startsWith("https://")) {
-            return path; // Already absolute
+            return path;
         }
         String cleanBaseUrl = baseUrl.replaceAll("/$", "");
         String cleanPath = path.startsWith("/") ? path : "/" + path;

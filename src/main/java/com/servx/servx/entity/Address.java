@@ -18,10 +18,10 @@ public class Address {
     private Long id;
 
     @Column(nullable = false, length = 50)
-    private String city; // ISO code for the city, if applicable, or plain city name.
+    private String city; // ISO code for the city
 
     @Column(nullable = false, length = 3)
-    private String country; // ISO 3166-1 alpha-3 country code (e.g., "USA", "AZE").
+    private String country; // ISO 3166-1 alpha-3 country code
 
     @Column(nullable = false, length = 10)
     private String zipCode;

@@ -17,7 +17,6 @@ public class ServiceProfileDTO {
     private final Double rating;
     private final Integer reviewCount;
     private final String profilePhotoUrl;
-    // Updated Constructor
     public ServiceProfileDTO(ServiceProfile service) {
         this.id = service.getId();
         this.providerId = service.getUser().getId();

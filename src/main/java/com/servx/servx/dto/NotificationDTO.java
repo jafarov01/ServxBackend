@@ -1,6 +1,5 @@
 package com.servx.servx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.servx.servx.entity.NotificationPayload;
 import lombok.Builder;
 import lombok.Getter;

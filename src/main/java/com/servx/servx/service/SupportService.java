@@ -32,21 +32,18 @@ public class SupportService {
                     return new UserNotFoundException("User sending support request not found.");
                 });
 
-        // 2. Construct the Email Subject
         String subject = String.format("Servx Support Request - User %d (%s)",
                 user.getId(),
                 userEmail);
 
-        // 3. Construct the Email Body
         String body = buildEmailBody(user, request.getMessage());
 
-        // 4. Create and Send the Email
         try {
             SimpleMailMessage mailMessage = new SimpleMailMessage();
             mailMessage.setTo(supportRecipientEmail);
             mailMessage.setSubject(subject);
             mailMessage.setText(body);
-            mailMessage.setReplyTo(userEmail); // IMPORTANT: Set Reply-To the user's email
+            mailMessage.setReplyTo(userEmail);
 
             log.info("Attempting to send support email to {} from {}", supportRecipientEmail, userEmail);
             javaMailSender.send(mailMessage);

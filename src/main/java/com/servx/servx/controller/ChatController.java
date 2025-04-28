@@ -26,9 +26,8 @@ import java.util.List;
 public class ChatController {
 
     private final ChatService chatService;
-    private final UserRepository userRepository; // Assuming you have this
+    private final UserRepository userRepository;
 
-    // Endpoint to get the list of conversations for the Inbox view
     @GetMapping
     public List<ChatConversationDTO> getConversations(@AuthenticationPrincipal CustomUserDetails userDetails) {
         log.info("Fetching conversations for user: {}", userDetails.getUsername());
@@ -37,7 +36,6 @@ public class ChatController {
         return chatService.getUserConversations(user.getId());
     }
 
-    // Endpoint to get message history for a specific conversation/request
     @GetMapping("/{requestId}/messages")
     public Page<ChatMessageDTO> getMessages(
             @PathVariable Long requestId,
@@ -50,7 +48,6 @@ public class ChatController {
         return chatService.getMessagesForRequest(requestId, user.getId(), pageable);
     }
 
-    // Endpoint to mark messages in a conversation as read
     @PatchMapping("/{requestId}/read")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void markConversationAsRead(

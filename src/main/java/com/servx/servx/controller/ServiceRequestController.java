@@ -81,12 +81,11 @@ public class ServiceRequestController {
     @PostMapping("/{requestId}/confirm-booking/{messageId}")
     public ResponseEntity<ServiceRequestResponseDTO> confirmBooking(
             @PathVariable("requestId") Long requestId,
-            @PathVariable("messageId") Long messageId, // Capture messageId
+            @PathVariable("messageId") Long messageId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         log.info("Received request to confirm booking for request ID {} from message ID {}", requestId, messageId);
         User seeker = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
-        // Pass messageId to the service
         ServiceRequestResponseDTO updatedRequest = serviceRequestService.confirmBooking(requestId, messageId, seeker);
         return ResponseEntity.ok(updatedRequest);
     }

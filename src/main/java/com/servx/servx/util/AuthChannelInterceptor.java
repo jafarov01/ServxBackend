@@ -39,38 +39,34 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
-            // *** ADD THIS DETAILED LOGGING ***
             log.info(">>> Intercepting STOMP CONNECT frame. SessionId: {}", accessor.getSessionId());
             Map<String, List<String>> nativeHeaders = accessor.toNativeHeaderMap();
             if (nativeHeaders != null && !nativeHeaders.isEmpty()) {
                 log.info(">>> Received Native Headers in STOMP frame: {}", nativeHeaders);
             } else {
-                log.warn(">>> No native headers found in STOMP frame!"); // Will tell us if map is empty
+                log.warn(">>> No native headers found in STOMP frame!");
             }
-            // **********************************
 
             try {
-                // Proceed with existing handleConnectFrame logic
+
                 handleConnectFrame(accessor);
                 log.info("<<< STOMP CONNECT Authentication SUCCESSFUL for SessionId: {}", accessor.getSessionId());
-                return message; // Let the original CONNECT message proceed
+                return message;
             } catch (AuthenticationException e) {
                 log.error("<<< STOMP CONNECT Authentication FAILED for SessionId: {}: {}", accessor.getSessionId(), e.getMessage());
-                // Stop processing the message by returning null
+
                 return null;
             }
         }
-        return message; // Pass other messages through
+        return message;
     }
 
     private void handleConnectFrame(StompHeaderAccessor accessor) throws AuthenticationException {
-        // Now check the logs from above before this part runs!
         log.debug("handleConnectFrame: Attempting to get 'authorization' native header...");
-        List<String> authHeaders = accessor.getNativeHeader("authorization"); // Keep lowercase for now
+        List<String> authHeaders = accessor.getNativeHeader("authorization");
         String token = extractBearerToken(authHeaders);
 
         if (token == null) {
-            // Try uppercase just in case before failing
             log.warn("Native header 'authorization' not found, trying 'Authorization'...");
             authHeaders = accessor.getNativeHeader("Authorization");
             token = extractBearerToken(authHeaders);
@@ -81,8 +77,6 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
             }
         }
 
-        // ... rest of handleConnectFrame, extractBearerToken, authenticateUser ...
-        // (No changes needed below if above works)
         if (!jwtUtils.validateToken(token)) {
             log.warn("Invalid JWT token found in STOMP CONNECT header.");
             throw new BadCredentialsException("Invalid token");
@@ -93,7 +87,6 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
     private String extractBearerToken(List<String> authHeaders) {
         if (authHeaders != null && !authHeaders.isEmpty()) {
             String header = authHeaders.get(0);
-            // Trim whitespace just in case
             if (header.trim().startsWith("Bearer ")) {
                 return header.trim().substring(7);
             }
@@ -102,7 +95,6 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
     }
 
     private void authenticateUser(String token, StompHeaderAccessor accessor) {
-        // No changes needed here for now
         String email = jwtUtils.getEmailFromToken(token);
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));

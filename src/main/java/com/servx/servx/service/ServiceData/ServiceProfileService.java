@@ -12,18 +12,26 @@ import com.servx.servx.repository.ServiceAreaRepository;
 import com.servx.servx.repository.ServiceCategoryRepository;
 import com.servx.servx.repository.ServiceProfileRepository;
 import com.servx.servx.repository.UserRepository;
+import com.servx.servx.util.CustomUserDetails;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class ServiceProfileService {
     private final ServiceProfileRepository profileRepository;
     private final UserRepository userRepository;
@@ -75,6 +83,66 @@ public class ServiceProfileService {
                         "ServiceArea ID " + areaId + " doesn't belong to Category ID " + category.getId()));
     }
 
+    @Transactional(readOnly = true)
+    public List<ServiceProfileDTO> getRecommendedServices(int limit) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Long currentUserId;
+
+        if (authentication == null || !authentication.isAuthenticated() ||
+                authentication.getPrincipal() == null ||
+                "anonymousUser".equals(authentication.getPrincipal().toString())) {
+            log.warn("Cannot get recommendations: User is not authenticated.");
+            return Collections.emptyList();
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof CustomUserDetails) {
+            currentUserId = ((CustomUserDetails) principal).getId();
+            log.info("Fetching recommendations for user ID: {}", currentUserId);
+        } else {
+            log.error("Cannot get recommendations: Unexpected principal type: {}", principal.getClass());
+            return Collections.emptyList();
+        }
+
+
+        User currentUser = userRepository.findById(currentUserId)
+                .orElse(null);
+
+        if (currentUser == null || currentUser.getAddress() == null ||
+                currentUser.getAddress().getCity() == null ||
+                currentUser.getAddress().getCity().isBlank()) {
+            return Collections.emptyList();
+        }
+        String userCity = currentUser.getAddress().getCity();
+
+
+        Pageable pageable = PageRequest.of(0,
+                limit,
+                Sort.by(
+                        Sort.Order.desc("rating"),
+                        Sort.Order.desc("reviewCount")
+                ));
+
+        List<ServiceProfile> recommendedProfiles = profileRepository.findByProviderCity(userCity, pageable);
+
+
+        return recommendedProfiles.stream()
+                .map(ServiceProfileDTO::new)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ServiceProfileDTO> searchServiceProfiles(String query) {
+        List<ServiceProfile> foundProfiles = profileRepository.searchProfiles(query);
+
+        List<ServiceProfileDTO> results = foundProfiles.stream()
+                .map(ServiceProfileDTO::new)
+                .collect(Collectors.toList());
+
+        return results;
+    }
+
     private List<ServiceArea> getValidServiceAreas(ServiceCategory category, List<Long> areaIds) {
         List<ServiceArea> areas = areaRepository.findAllById(areaIds);
 
@@ -111,7 +179,7 @@ public class ServiceProfileService {
         return profileRepository.save(profile);
     }
 
-    @Transactional(readOnly = true) // Good practice for fetch methods
+    @Transactional(readOnly = true)
     public ServiceProfileDTO getServiceProfileDtoById(Long profileId) {
         ServiceProfile profile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new EntityNotFoundException("ServiceProfile not found with ID: " + profileId));

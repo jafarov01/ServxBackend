@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 
 @Entity
-@Table(name = "bookings") // Define the table name
+@Table(name = "bookings")
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,24 +22,23 @@ public class Booking {
     private Long id;
 
     @Column(unique = true, nullable = false, updatable = false)
-    private String bookingNumber; // e.g., "BK-12345", generated in service layer
+    private String bookingNumber;
 
     @Column(nullable = false)
-    private Instant scheduledStartTime; // From BookingRequestPayload
+    private Instant scheduledStartTime;
 
     @Column(nullable = false)
-    private Integer durationMinutes; // Consider adding this to payload/sheet
+    private Integer durationMinutes;
 
     @Column(nullable = false)
-    private Double priceMin; // From BookingRequestPayload
+    private Double priceMin;
 
     @Column(nullable = false)
-    private Double priceMax; // From BookingRequestPayload (can be same as min)
+    private Double priceMax;
 
-    @Column(columnDefinition = "TEXT") // Allow longer notes
-    private String notes; // From BookingRequestPayload
+    @Column(columnDefinition = "TEXT")
+    private String notes;
 
-    // Store address details directly, copied from ServiceRequest at booking time
     @Column(nullable = false)
     private String locationAddressLine;
 
@@ -66,9 +65,7 @@ public class Booking {
     @Column(nullable = false)
     private Instant updatedAt;
 
-    // --- Relationships ---
-
-    @OneToOne(fetch = FetchType.LAZY) // A booking confirms one specific request
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_request_id", referencedColumnName = "id", unique = true, nullable = false)
     private ServiceRequest serviceRequest;
 
@@ -81,19 +78,17 @@ public class Booking {
     private User seeker;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "service_id", nullable = false) // Link to the specific ServiceProfile booked
+    @JoinColumn(name = "service_id", nullable = false)
     private ServiceProfile service;
 
-    // --- Lifecycle Callbacks ---
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
-        if (this.status == null) { // Default status if not set by builder
+        if (this.status == null) {
             this.status = BookingStatus.UPCOMING;
         }
-        // Consider generating bookingNumber here if not done in service
     }
 
     @PreUpdate

@@ -14,7 +14,7 @@ import java.time.Instant;
 @AllArgsConstructor
 public class BookingDTO {
 
-    private Long id; // Booking ID
+    private Long id;
     private String bookingNumber;
     private BookingStatus status;
     private boolean providerMarkedComplete;
@@ -36,10 +36,10 @@ public class BookingDTO {
     // Notes from proposal
     private String notes;
 
-    // Service Info (Simplified - get from linked ServiceProfile)
-    private Long serviceId; // ID of the ServiceProfile
-    private String serviceName; // e.g., "AC Repair", could be subcategory name
-    private String serviceCategoryName; // e.g., "Appliance Repair"
+    // Service Info
+    private Long serviceId;
+    private String serviceName;
+    private String serviceCategoryName;
 
     // Provider Info
     private Long providerId;
@@ -53,20 +53,17 @@ public class BookingDTO {
     private String seekerLastName;
     private String seekerProfilePhotoUrl;
 
-    // Link back to the original request for messaging context
+    // Link back to the original request for messaging
     private Long serviceRequestId;
 
-    // Timestamps (Optional for display, but often useful)
     private Instant createdAt;
     private Instant updatedAt;
 
-    // --- Helper method to get full provider name ---
     public String getProviderFullName() {
         return (providerFirstName != null ? providerFirstName : "")
                 + " " + (providerLastName != null ? providerLastName : "");
     }
 
-    // --- Helper method to get full seeker name ---
     public String getSeekerFullName() {
         return (seekerFirstName != null ? seekerFirstName : "")
                 + " " + (seekerLastName != null ? seekerLastName : "");

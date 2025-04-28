@@ -1,9 +1,6 @@
 package com.servx.servx.controller;
 
-import com.servx.servx.dto.AuthResponseDTO;
-import com.servx.servx.dto.LoginRequestDTO;
-import com.servx.servx.dto.RegisterRequestDTO;
-import com.servx.servx.dto.UserResponseDTO;
+import com.servx.servx.dto.*;
 import com.servx.servx.service.Auth.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -11,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -39,7 +38,19 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
 
-        return ResponseEntity.ok().build();  // A simple OK response to confirm logout
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO request) {
+        authService.initiatePasswordReset(request.getEmail());
+        return ResponseEntity.ok(Map.of("message", "If an account with that email exists, a password reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO request) {
+        authService.completePasswordReset(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(Map.of("message", "Password has been successfully reset."));
     }
 
 }

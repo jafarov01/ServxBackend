@@ -8,6 +8,7 @@ import com.servx.servx.service.ServiceData.ServiceProfileService;
 import com.servx.servx.util.JwtUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/categories/{categoryId}")
 @RequiredArgsConstructor
+@Slf4j
 public class ServiceProfileController {
     private final ServiceProfileService profileService;
     private final JwtUtils jwtUtils;
