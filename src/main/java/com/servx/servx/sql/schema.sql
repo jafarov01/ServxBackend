@@ -278,3 +278,75 @@ CREATE INDEX idx_gin_users_first_name ON users USING gin (first_name gin_trgm_op
 CREATE INDEX idx_gin_users_last_name ON users USING gin (last_name gin_trgm_ops);
 
 CREATE INDEX idx_gin_users_fullname ON users USING gin ((first_name || ' ' || last_name) gin_trgm_ops);
+
+------ DROPPING COMMAND ---------
+
+DROP EXTENSION IF EXISTS pg_trgm CASCADE;
+
+DROP TABLE IF EXISTS chat_messages CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS reviews CASCADE;
+DROP TABLE IF EXISTS service_requests CASCADE;
+DROP TABLE IF EXISTS bookings CASCADE;
+DROP TABLE IF EXISTS languages CASCADE;
+DROP TABLE IF EXISTS verification_tokens CASCADE;
+DROP TABLE IF EXISTS password_reset_tokens CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS services CASCADE;
+DROP TABLE IF EXISTS service_areas CASCADE;
+DROP TABLE IF EXISTS service_categories CASCADE;
+DROP TABLE IF EXISTS addresses CASCADE;
+
+DROP INDEX IF EXISTS idx_notifications_recipient;
+DROP INDEX IF EXISTS idx_notifications_type;
+DROP INDEX IF EXISTS idx_notifications_created_at;
+DROP INDEX IF EXISTS idx_notifications_is_read;
+DROP INDEX IF EXISTS idx_chat_messages_service_request_id;
+DROP INDEX IF EXISTS idx_chat_messages_timestamp;
+DROP INDEX IF EXISTS idx_bookings_provider_status;
+DROP INDEX IF EXISTS idx_bookings_seeker_status;
+DROP INDEX IF EXISTS idx_bookings_start_time;
+DROP INDEX IF EXISTS idx_addresses_city;
+DROP INDEX IF EXISTS idx_addresses_zip_code;
+DROP INDEX IF EXISTS idx_services_user_id;
+DROP INDEX IF EXISTS idx_services_category_id;
+DROP INDEX IF EXISTS idx_services_area_id;
+DROP INDEX IF EXISTS idx_gin_service_areas_name;
+DROP INDEX IF EXISTS idx_gin_service_categories_name;
+DROP INDEX IF EXISTS idx_gin_users_first_name;
+DROP INDEX IF EXISTS idx_gin_users_last_name;
+DROP INDEX IF EXISTS idx_gin_users_fullname;
+
+---------- CREATE ------------
+psql -U servx -d servx -a -f /Users/jafarov/PROJECTS/ServxBackend/src/main/java/com/servx/servx/config/schema.sql
+
+     1. Design Chapter (Conceptual - No Specific Tech Names)
+
+System Architecture: Good. Focus on the Client-Server model, the layers within the backend (Presentation/Service/Data Access), and the communication interfaces conceptually (REST-like API, Real-time channel). Include the high-level diagram here.
+Design Patterns: (Add this section) This is crucial for the Design chapter. Include the conceptual descriptions of MVVM, Observer, Singleton, Delegate, Actor (Client) and Layered Arch, DI, Repository, DTO, MVC-like (Backend), OOP (General) that we discussed.
+Data Flow: Good. Keep the description conceptual, outlining the general path of data from user interaction to database and back.
+Database Design: Good. Focus on why a relational model was chosen, the main entities and their core relationships (conceptual ERD is good here), and the principle of using indexing for performance.
+UI and UX Design: Good. Discuss the user-centric approach, core navigation principles (tab bar), key screen design goals, and maybe the rationale behind the visual style.
+APIs and Integrations: Good. Describe the concept of the API (stateless request/response, resource-oriented) and the real-time channel (for chat) without detailing specific endpoints or protocols yet.
+Scalability and Load Balancing: (Consider revising/removing) Unless you made specific design choices for scalability (e.g., stateless backend design to allow horizontal scaling), this might be too speculative for the current design. You could briefly mention that the client-server architecture allows for future scaling by separating concerns, or move this discussion entirely to Future Work in the Implementation chapter.
+(Optional) Security Design: Briefly discuss the conceptual approach – e.g., token-based authentication for APIs, secure communication channels, input validation principles.
+2. Implementation Chapter (Specific Tools, Tech, Challenges)
+
+Development Environment: (Add this) Briefly list the OS, IDEs used (Xcode, IntelliJ IDEA).
+Technology Stack: (Add this) Create a table or list summarizing all key technologies, frameworks, languages, and significant libraries with their versions (Java 23, Spring Boot 3.x, Maven, PostgreSQL 14.15, pg_trgm, Swift, SwiftUI, SwiftStomp, etc.). Crucially, include links to their official documentation here.
+Backend Implementation: (Combine related items) Discuss the Spring Boot/Java/Maven setup, key modules (Web, Data JPA, Security, WebSocket), project structure (controllers, services, repositories, DTOs, entities), JWT implementation details, email service setup, WebSocket/STOMP configuration.
+Database Implementation: Discuss the specific PostgreSQL setup, schema details (reference the detailed ERD here), and the implementation of specific indexes (like pg_trgm).
+Frontend Implementation: (Combine related items) Discuss the SwiftUI/Swift setup, key frameworks used (Combine, MapKit), project structure (Views, ViewModels, Services, Models, NavigationManager), SwiftStomp integration, state management approach.
+Version Control: (Rename) Call it Version Control (Git & GitHub) and briefly mention its use for tracking changes and collaboration.
+Key Implementation Challenges: (Add this) Discuss specific technical hurdles encountered and how they were solved (e.g., WebSocket session management across logins, debugging API mismatches, implementing the specific recommendation logic, handling asynchronous operations). Include relevant (short) code snippets here to illustrate points.
+Use of LLM Tools: (Add this) Include the paragraph we drafted about using LLMs and other online resources transparently.
+Limitations and Future Work: (Keep this last) Detail the unimplemented features (Social Login, Bookmarks, E-Receipts, Dark Mode, Push Notifications, Change Email/Password backend), known bugs, potential performance bottlenecks not addressed, security considerations for further review, and ideas for future features or architectural improvements (like containerization).
+3. Testing Chapter (Variety and Evidence)
+
+Testing Strategy Overview: Briefly state the different types of testing performed.
+API Endpoint Testing (Postman): Essential. Show screenshots of requests/responses for key endpoints (happy path and error cases). Explain the test case for each.
+Database Verification: Show evidence (psql output or GUI screenshots) of data being correctly created/updated/deleted after specific API calls (e.g., registration, booking creation, profile update). Maybe include an EXPLAIN ANALYZE for a key query.
+WebSocket/Chat Testing: Describe manual testing steps (sending/receiving messages, booking proposals), include relevant client and backend logs as evidence.
+Manual Test Plan & Execution: Include the detailed checklist/table covering key user flows (Registration, Login, Search, Request Service, Booking Flow, Profile Edit, etc.). Include screenshots from the app as evidence for key steps.
+(Optional) Backend Unit/Integration Tests: If you wrote any JUnit tests, include snippets and output.
+(Optional) Usability Testing: Mention any informal feedback received from test users.
