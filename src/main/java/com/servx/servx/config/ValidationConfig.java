@@ -1,4 +1,4 @@
-package com.servx.servx.util;
+package com.servx.servx.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

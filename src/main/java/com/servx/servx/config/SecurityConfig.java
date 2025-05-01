@@ -1,6 +1,7 @@
-package com.servx.servx.util;
+package com.servx.servx.config;
 
 import com.servx.servx.enums.Role;
+import com.servx.servx.util.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

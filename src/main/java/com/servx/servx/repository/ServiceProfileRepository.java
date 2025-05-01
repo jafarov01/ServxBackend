@@ -20,8 +20,6 @@ public interface ServiceProfileRepository extends JpaRepository<ServiceProfile, 
             @Param("serviceAreaId") Long serviceAreaId
     );
 
-    List<ServiceProfile> findByCategory_Id(@Param("categoryId") Long categoryId);
-
     boolean existsByUserAndCategoryAndServiceArea(
             User user,
             ServiceCategory category,
@@ -32,8 +30,13 @@ public interface ServiceProfileRepository extends JpaRepository<ServiceProfile, 
             "JOIN sp.user u " +
             "JOIN u.address a " +
             "WHERE u.role = 'SERVICE_PROVIDER' " +
-            "AND LOWER(a.city) = LOWER(:city)")
-    List<ServiceProfile> findByProviderCity(@Param("city") String city, Pageable pageable);
+            "AND LOWER(a.city) = LOWER(:city) " +
+            "AND u.id <> :excludeUserId")
+    List<ServiceProfile> findByProviderCityExcludingUser(
+                                                          @Param("city") String city,
+                                                          @Param("excludeUserId") Long excludeUserId,
+                                                          Pageable pageable
+    );
 
     @Query("SELECT DISTINCT sp FROM ServiceProfile sp " +
             "JOIN sp.user u " +

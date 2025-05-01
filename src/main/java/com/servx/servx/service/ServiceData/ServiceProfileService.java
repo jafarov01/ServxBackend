@@ -14,6 +14,7 @@ import com.servx.servx.repository.ServiceProfileRepository;
 import com.servx.servx.repository.UserRepository;
 import com.servx.servx.util.CustomUserDetails;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,15 +34,19 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class ServiceProfileService {
+
     private final ServiceProfileRepository profileRepository;
     private final UserRepository userRepository;
     private final ServiceCategoryRepository categoryRepository;
     private final ServiceAreaRepository areaRepository;
 
+    @Value("${app.base-url}")
+    private String appBaseUrl;
+
     public List<ServiceProfileDTO> getServicesByCategoryAndSubcategory(Long categoryId, Long subcategoryId) {
         return profileRepository.findByCategory_IdAndServiceArea_Id(categoryId, subcategoryId)
                 .stream()
-                .map(ServiceProfileDTO::new)
+                .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
@@ -53,7 +58,7 @@ public class ServiceProfileService {
         checkForDuplicateProfile(user, category, serviceArea);
 
         ServiceProfile profile = buildAndSaveProfile(user, category, serviceArea, request);
-        return new ServiceProfileDTO(profile);
+        return mapToDto(profile);
     }
 
     public List<ServiceProfileDTO> createBulkServices(Long userId, BulkServiceProfileRequestDTO request) {
@@ -66,26 +71,8 @@ public class ServiceProfileService {
                 .collect(Collectors.toList());
     }
 
-    private User getUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
-    }
-
-    private ServiceCategory getCategory(Long categoryId) {
-        return categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found with ID: " + categoryId));
-    }
-
-    private ServiceArea getValidServiceArea(ServiceCategory category, Long areaId) {
-        return areaRepository.findById(areaId)
-                .filter(area -> area.getCategory().equals(category))
-                .orElseThrow(() -> new InvalidServiceAreaException(
-                        "ServiceArea ID " + areaId + " doesn't belong to Category ID " + category.getId()));
-    }
-
     @Transactional(readOnly = true)
     public List<ServiceProfileDTO> getRecommendedServices(int limit) {
-
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Long currentUserId;
 
@@ -105,7 +92,6 @@ public class ServiceProfileService {
             return Collections.emptyList();
         }
 
-
         User currentUser = userRepository.findById(currentUserId)
                 .orElse(null);
 
@@ -114,21 +100,19 @@ public class ServiceProfileService {
                 currentUser.getAddress().getCity().isBlank()) {
             return Collections.emptyList();
         }
+
         String userCity = currentUser.getAddress().getCity();
 
-
-        Pageable pageable = PageRequest.of(0,
-                limit,
+        Pageable pageable = PageRequest.of(0, limit,
                 Sort.by(
                         Sort.Order.desc("rating"),
                         Sort.Order.desc("reviewCount")
                 ));
 
-        List<ServiceProfile> recommendedProfiles = profileRepository.findByProviderCity(userCity, pageable);
-
+        List<ServiceProfile> recommendedProfiles = profileRepository.findByProviderCityExcludingUser(userCity, currentUserId, pageable);
 
         return recommendedProfiles.stream()
-                .map(ServiceProfileDTO::new)
+                .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
@@ -136,11 +120,49 @@ public class ServiceProfileService {
     public List<ServiceProfileDTO> searchServiceProfiles(String query) {
         List<ServiceProfile> foundProfiles = profileRepository.searchProfiles(query);
 
-        List<ServiceProfileDTO> results = foundProfiles.stream()
-                .map(ServiceProfileDTO::new)
+        return foundProfiles.stream()
+                .map(this::mapToDto)
                 .collect(Collectors.toList());
+    }
 
-        return results;
+    @Transactional(readOnly = true)
+    public ServiceProfileDTO getServiceProfileDtoById(Long profileId) {
+        ServiceProfile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new EntityNotFoundException("ServiceProfile not found with ID: " + profileId));
+        return mapToDto(profile);
+    }
+
+    private ServiceProfileDTO createSingleProfile(User user, ServiceCategory category,
+                                                  ServiceArea area, BulkServiceProfileRequestDTO request) {
+        checkForDuplicateProfile(user, category, area);
+        return mapToDto(buildAndSaveProfile(
+                user,
+                category,
+                area,
+                new CreateServiceProfileRequestDTO(
+                        category.getId(),
+                        area.getId(),
+                        request.getWorkExperience(),
+                        request.getPrice()
+                )
+        ));
+    }
+
+    private User getUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+    }
+
+    private ServiceCategory getCategory(Long categoryId) {
+        return categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found with ID: " + categoryId));
+    }
+
+    private ServiceArea getValidServiceArea(ServiceCategory category, Long areaId) {
+        return areaRepository.findById(areaId)
+                .filter(area -> area.getCategory().equals(category))
+                .orElseThrow(() -> new InvalidServiceAreaException(
+                        "ServiceArea ID " + areaId + " doesn't belong to Category ID " + category.getId()));
     }
 
     private List<ServiceArea> getValidServiceAreas(ServiceCategory category, List<Long> areaIds) {
@@ -179,26 +201,41 @@ public class ServiceProfileService {
         return profileRepository.save(profile);
     }
 
-    @Transactional(readOnly = true)
-    public ServiceProfileDTO getServiceProfileDtoById(Long profileId) {
-        ServiceProfile profile = profileRepository.findById(profileId)
-                .orElseThrow(() -> new EntityNotFoundException("ServiceProfile not found with ID: " + profileId));
-        return new ServiceProfileDTO(profile);
+    private ServiceProfileDTO mapToDto(ServiceProfile profile) {
+        if (profile == null) {
+            return null;
+        }
+
+        String fullPhotoUrl = null;
+        if (profile.getUser() != null) {
+            fullPhotoUrl = constructFullUrl(appBaseUrl, profile.getUser().getProfilePhotoUrl());
+        }
+
+        return new ServiceProfileDTO(
+                profile.getId(),
+                profile.getUser().getId(),
+                profile.getUser().getFirstName() + " " + profile.getUser().getLastName(),
+                profile.getCategory().getName(),
+                profile.getServiceArea().getName(),
+                profile.getWorkExperience(),
+                profile.getPrice(),
+                (profile.getReviewCount() != null && profile.getReviewCount() > 0 && profile.getRating() != null)
+                        ? profile.getRating() / profile.getReviewCount()
+                        : 0.0,
+                profile.getReviewCount() != null ? profile.getReviewCount() : 0,
+                fullPhotoUrl
+        );
     }
 
-    private ServiceProfileDTO createSingleProfile(User user, ServiceCategory category,
-                                                  ServiceArea area, BulkServiceProfileRequestDTO request) {
-        checkForDuplicateProfile(user, category, area);
-        return new ServiceProfileDTO(buildAndSaveProfile(
-                user,
-                category,
-                area,
-                new CreateServiceProfileRequestDTO(
-                        category.getId(),
-                        area.getId(),
-                        request.getWorkExperience(),
-                        request.getPrice()
-                )
-        ));
+    private String constructFullUrl(String baseUrl, String path) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        if (path.toLowerCase().startsWith("http://") || path.toLowerCase().startsWith("https://")) {
+            return path;
+        }
+        String cleanBaseUrl = (baseUrl != null && !baseUrl.isBlank()) ? baseUrl.replaceAll("/$", "") : "";
+        String cleanPath = path.startsWith("/") ? path : "/" + path;
+        return cleanBaseUrl.isEmpty() ? null : cleanBaseUrl + cleanPath;
     }
 }

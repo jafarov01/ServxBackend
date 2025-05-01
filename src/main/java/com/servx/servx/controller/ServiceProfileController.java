@@ -31,7 +31,7 @@ public class ServiceProfileController {
     }
 
     @GetMapping("/{profileId}")
-    public ResponseEntity<ServiceProfileDTO> getServiceProfileById(@PathVariable Long profileId) {
+    public ResponseEntity<ServiceProfileDTO> getServiceProfileById(@PathVariable Long categoryId, @PathVariable Long profileId) {
         ServiceProfileDTO profileDto = profileService.getServiceProfileDtoById(profileId);
         return ResponseEntity.ok(profileDto);
     }
